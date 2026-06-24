@@ -37,8 +37,16 @@ Mỗi từ, nếu chuỗi không tạo thành **âm tiết tiếng Việt hợp 
 
 ### Bảo trì
 - Sửa engine → `make test` (kiểm) → `cmake --build build` → `sudo cmake --install build`
-  → restart fcitx5 (`fcitx5 -r -d`).
+  → restart fcitx5 (`fcitx5 -r -d`). Đổi icon mà không hiện: kill hẳn fcitx5 rồi
+  chạy lại (`pkill -x fcitx5; fcitx5 -d`) để xả icon cache — `-r` không đủ.
 - Đặt dấu kiểu mới (`hoà`/`thuý`): đổi `oldStyleTone=false` trong `src/engine.hpp`.
+
+### Lưu ý: app sandbox (snap/flatpak) chặn bộ gõ
+App cài kiểu **snap/flatpak** chạy sandbox riêng, thường KHÔNG nối được fcitx5 →
+gõ tiếng Việt chết trong app đó (vgo, Lotus, *mọi* bộ gõ — KHÔNG phải lỗi vgo).
+Triệu chứng: gõ được ở browser/editor nhưng app sandbox thì không.
+- Ví dụ đã gặp: **Telegram snap** → đổi sang bản **tĩnh** telegram.org
+  (`~/.local/opt/Telegram`, không sandbox, tự cập nhật) là gõ được.
 
 ### Phase 2 cần (một lần, có sudo)
 
@@ -69,9 +77,10 @@ sau phụ âm cuối đều ra đúng (`toasn` và `toans` đều → `toán`).
 | Gõ | Ra | | Gõ | Ra |
 |----|----|-|----|----|
 | s f r x j | sắc huyền hỏi ngã nặng | | aa ee oo | â ê ô |
-| z | bỏ dấu thanh | | aw ow uw / w | ă ơ ư |
+| z | bỏ dấu thanh | | aw ow uw | ă ơ ư |
 | dd | đ | | uow | ươ |
 
+`w` đứng một mình = chữ `w` (gõ `ư` bằng `uw`, đỡ phá tiếng Anh).
 Gõ lại phím điều khiển = undo + nhả chữ thật (`ass`→`as`, `aaa`→`aa`, `ddd`→`dd`).
 
 ## Tham khảo
