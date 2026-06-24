@@ -27,3 +27,7 @@ install(FILES "${CMAKE_SOURCE_DIR}/fcitx5/vgo-addon.conf" RENAME vgo.conf
         DESTINATION "${FCITX_INSTALL_PKGDATADIR}/addon")
 install(FILES "${CMAKE_SOURCE_DIR}/fcitx5/vgo.conf"
         DESTINATION "${FCITX_INSTALL_PKGDATADIR}/inputmethod")
+install(FILES "${CMAKE_SOURCE_DIR}/fcitx5/vgo.svg" RENAME fcitx-vgo.svg
+        DESTINATION "${FCITX_INSTALL_DATADIR}/icons/hicolor/scalable/apps")
+# Cập nhật icon-theme cache để fcitx5 thấy icon mới (nếu không, hiện icon mặc định).
+install(CODE "execute_process(COMMAND gtk-update-icon-cache -f -q \"${FCITX_INSTALL_DATADIR}/icons/hicolor\" ERROR_QUIET)")
