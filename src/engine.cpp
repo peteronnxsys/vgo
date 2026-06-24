@@ -2,7 +2,9 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 #include <set>
+#include <fstream>
 #include <cctype>
 
 namespace vgo {
@@ -369,6 +371,49 @@ bool Engine::plausible() const {
     if (!hasVowel) return isPrefixOfSome(ONSETS, onset);  // mới có phụ âm đầu
     if (!ONSETS.count(onset)) return false;
     return isPrefixOfSome(CODAS, coda);
+}
+
+// ================= Từ điển tiếng Anh =================
+namespace {
+std::unordered_set<std::string>& dictSet() {
+    static std::unordered_set<std::string> s;
+    return s;
+}
+// Telex của vài từ Việt rất thường, trùng mặt chữ một từ Anh -> luôn giữ Việt.
+const std::set<std::string> VN_PRIORITY = { "cos", "nos" };  // "có", "nó"
+
+std::string lower(const std::string& s) {
+    std::string r = s;
+    for (char& c : r) c = (char)std::tolower((unsigned char)c);
+    return r;
+}
+} // namespace
+
+void dictAddWord(const std::string& w) {
+    if (!w.empty()) dictSet().insert(lower(w));
+}
+void dictLoadFile(const std::string& path) {
+    std::ifstream f(path);
+    std::string line;
+    while (std::getline(f, line)) {
+        while (!line.empty() && (line.back()=='\r' || line.back()==' ' || line.back()=='\t'))
+            line.pop_back();
+        size_t i = 0;
+        while (i < line.size() && (line[i]==' ' || line[i]=='\t')) ++i;
+        if (i) line = line.substr(i);
+        if (!line.empty() && line[0] != '#') dictAddWord(line);
+    }
+}
+bool dictContains(const std::string& w) {
+    return dictSet().count(lower(w)) > 0;
+}
+
+std::string Engine::display() const {
+    if (forcedRaw_) return raw_;                       // nút restore
+    std::string low = lower(raw_);
+    if (!VN_PRIORITY.count(low) && dictContains(low))  // từ tiếng Anh đã biết
+        return raw_;
+    return plausible() ? preedit() : raw_;
 }
 
 std::string typeString(const std::string& keys, Config cfg) {

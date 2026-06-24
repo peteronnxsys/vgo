@@ -28,20 +28,25 @@ public:
 
     void key(char c);          // nạp 1 phím ASCII
     void backspace();          // xoá 1 ký tự cuối
-    void reset() { buf_.clear(); raw_.clear(); }
+    void reset() { buf_.clear(); raw_.clear(); forcedRaw_ = false; }
     bool empty() const { return buf_.empty(); }
-    std::string preedit() const;   // chuỗi đã biến đổi tiếng Việt (UTF-8)
+    std::string preedit() const;        // chuỗi đã biến đổi tiếng Việt (UTF-8)
+    const std::string& raw() const { return raw_; }  // phím thô đã gõ
 
     // Có thể là một âm tiết tiếng Việt hợp lệ (hoặc tiền tố của một âm tiết)?
     bool plausible() const;
-    // Chuỗi để hiển thị: bản tiếng Việt nếu plausible, ngược lại = phím thô.
-    // Đây là cái tầng tích hợp nên dùng (tự xử tiếng Anh lẫn lộn).
-    std::string display() const { return plausible() ? preedit() : raw_; }
+    // Khoá từ đang gõ về dạng thô (nút restore): hết biến đổi tiếng Việt.
+    void forceRaw() { forcedRaw_ = true; }
+
+    // Chuỗi để hiển thị (tầng tích hợp dùng cái này — tự xử tiếng Anh lẫn lộn):
+    //   forceRaw / từ có trong từ điển Anh -> thô; plausible -> tiếng Việt; còn lại -> thô.
+    std::string display() const;
 
 private:
     Config cfg_;
     std::u32string buf_;       // buffer đã biến đổi
     std::string raw_;          // phím thô đã gõ (cho fallback tiếng Anh)
+    bool forcedRaw_ = false;   // nút restore đã khoá từ này về thô
 
     void appendLiteral(char c);
     void normalizeTone();
@@ -52,6 +57,12 @@ private:
     bool handleCircum(char lc, char typed);
     bool handleDStroke(char typed);
 };
+
+// ---- Từ điển tiếng Anh (chia sẻ toàn tiến trình; nạp 1 lần) ----
+// Khi chuỗi phím thô khớp một từ trong từ điển -> coi là tiếng Anh, nhả thô.
+void dictAddWord(const std::string& w);          // thêm 1 từ (lowercase hoá)
+void dictLoadFile(const std::string& path);      // nạp file, mỗi dòng 1 từ; thiếu file thì bỏ qua
+bool dictContains(const std::string& w);         // tra (lowercase)
 
 // Tiện ích cho test/CLI: nạp cả chuỗi phím, tự commit khi gặp ký tự không phải chữ.
 std::string typeString(const std::string& keys, Config cfg = {});

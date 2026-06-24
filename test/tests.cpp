@@ -67,6 +67,23 @@ int main() {
             std::printf("FAIL  %-16s -> got [%s]  want [%s]\n", c.keys, got.c_str(), c.want);
         }
     }
-    std::printf("\n%d passed, %d failed (%zu total)\n", pass, fail, CASES.size());
+    // --- từ điển tiếng Anh + VN priority (nạp từ vào dict rồi kiểm) ---
+    dictAddWord("test");
+    dictAddWord("this");
+    dictAddWord("cos");   // cố tình thêm để chắc VN_PRIORITY vẫn thắng
+    const std::vector<Case> DCASES = {
+        {"test", "test"},   // trong dict -> giữ thô, không thành "tét"
+        {"this", "this"},   // -> không thành "thí"
+        {"cos",  "có"},     // VN_PRIORITY: dù có trong dict vẫn ra "có"
+        {"browser", "browser"},  // vẫn bắt theo cấu trúc (không cần dict)
+    };
+    for (auto& c : DCASES) {
+        std::string got = typeString(c.keys, cfg);
+        if (got == c.want) ++pass;
+        else { ++fail; std::printf("FAIL(dict) %-10s -> got [%s]  want [%s]\n",
+                                   c.keys, got.c_str(), c.want); }
+    }
+
+    std::printf("\n%d passed, %d failed (%d total)\n", pass, fail, pass + fail);
     return fail ? 1 : 0;
 }

@@ -34,6 +34,7 @@ public:
                fcitx::InputContextEvent &event) override;
 
 private:
+    void render(fcitx::InputContext *ic, VgoState *state);       // áp display() ra ô nhập
     void showPreedit(fcitx::InputContext *ic, VgoState *state);  // fallback
     void finalize(fcitx::InputContext *ic, VgoState *state);     // chốt từ + dọn
 
