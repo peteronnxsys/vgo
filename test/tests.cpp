@@ -35,11 +35,11 @@ static const std::vector<Case> CASES = {
     {"toansr", "toản"},  // t,o,a,n,s,r ? kiểm chuỗi dài
     {"loanx", "loãn"}, {"toans", "toán"}, {"uons", "uón"},
     {"toasn", "toán"},  // gõ dấu trước phụ âm cuối -> phải dời
-    // --- undo (cơ chế engine vẫn revert; display ra thô nếu cấu trúc không hợp lệ) ---
-    {"aaa", "aa"},     // "aa": hợp lệ cấu trúc -> giữ bản revert
-    {"ass", "ass"},    // "as": coda 's' không hợp lệ -> thô
-    {"ddd", "ddd"},    // "dd" không phải tiền tố phụ âm đầu -> thô
-    {"aww", "aww"},    // "aw": coda 'w' không hợp lệ -> thô
+    // --- gõ đúp phím điều khiển ---
+    {"aaa", "aa"},      // mũ (aa->â) gõ lần 3: revert -> "aa"
+    {"thijj", "thị"},   // dấu gõ đúp (fat-finger): lờ phím thừa -> giữ "thị"
+    {"ddd", "ddd"},     // "dd" không phải tiền tố phụ âm đầu -> thô
+    {"aww", "aww"},     // "aw": coda 'w' không hợp lệ -> thô
     // --- tiếng Anh lẫn lộn: phải GIỮ NGUYÊN (không mangle) ---
     {"browser", "browser"}, {"file", "file"}, {"password", "password"},
     {"video", "video"}, {"data", "data"}, {"google", "google"},

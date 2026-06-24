@@ -193,6 +193,7 @@ void Engine::normalizeTone() {
 }
 
 bool Engine::handleTone(int tone, char typed) {
+    (void)typed;
     int tgt = findToneTarget(buf_, cfg_);
     if (tgt < 0) return false;            // không có nguyên âm -> ký tự thường
 
@@ -201,12 +202,8 @@ bool Engine::handleTone(int tone, char typed) {
         Decomp d = decompose(buf_[i]);
         if (isVowelBase(d.base) && d.tone != T_NONE) { curTone = d.tone; curPos = i; break; }
     }
-    if (curTone == tone) {                // gõ lại cùng phím thanh -> bỏ dấu + chữ thật
-        Decomp d = decompose(buf_[curPos]);
-        buf_[curPos] = compose(d.base, d.mod, T_NONE, d.upper);
-        appendLiteral(typed);
-        normalizeTone();
-        return true;
+    if (curTone == tone) {                // gõ đúp cùng phím dấu (fat-finger) -> lờ đi,
+        return true;                      // giữ nguyên từ. (Từ Anh đã do từ điển/restore lo.)
     }
     if (curPos >= 0) {                    // gỡ dấu cũ
         Decomp d = decompose(buf_[curPos]);
