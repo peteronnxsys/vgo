@@ -21,7 +21,7 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
 | 2 | Addon fcitx5 in-process, KHÔNG preedit (ghi-đè surrounding text) | ✅ xong, đang dùng cạnh Lotus |
-| 3 | Auto Anh-Việt (kiểm âm tiết, khỏi switch) | ✅ xong (76/76 test) |
+| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển 2 tầng + restore (Esc) tự học | ✅ xong (81/81 test) |
 | — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
 
 **Nguyên tắc:** đơn giản nhất có thể, chỉ phục vụ một người, **không đụng Lotus**
@@ -29,11 +29,21 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 không server phụ, ghi-đè theo diff (chỉ phần đuôi đổi), không cửa sổ gợi ý.
 
 ### Auto Anh-Việt (Phase 3)
-Mỗi từ, nếu chuỗi không tạo thành **âm tiết tiếng Việt hợp lệ** (sai phụ âm
-đầu/cuối, hoặc >1 cụm nguyên âm) → nhả phím thô. Bắt được hầu hết từ Anh
-(`browser`, `file`, `video`, `password`, `javascript`…).
-**Giới hạn:** từ Anh ngắn trùng cấu trúc Việt (`test`→`tét`, `this`→`thí`) vẫn bị
-đổi — không tránh được nếu không có từ điển. Gặp thì Ctrl+Space về tiếng Anh.
+Ba lớp, rẻ → mạnh:
+1. **Kiểm cấu trúc âm tiết** — chuỗi không phải âm tiết Việt hợp lệ (sai phụ âm
+   đầu/cuối, >1 cụm nguyên âm) → nhả thô. Bắt `browser`, `file`, `password`…
+2. **Từ điển tiếng Anh 2 tầng** — chuỗi thô khớp từ Anh đã biết → nhả thô. Bắt
+   cả từ trùng cấu trúc Việt (`test`→`test` thay vì `tét`, `this`, `code`…).
+   - **base** (chỉ-đọc): `/usr/share/vgo/en-base.txt` (~8800 từ **≥4 ký tự** —
+     lọc ≥4 để tránh va chạm `cas`→cá, `mas`→má, `cos`→có…).
+   - **cá nhân** (tự nuôi): `~/.config/vgo/words.txt`, gộp với base khi tra.
+   - `VN_PRIORITY` (hardcode trong engine) giữ vài âm Việt thường: `cos`→có, `nos`→nó.
+3. **Restore = Esc** (khi đang gõ dở) — khoá từ về thô + **tự ghi vào
+   `words.txt`** (lần sau auto). Dùng phím **không-modifier** vì app (VS Code/
+   Telegram) nuốt tổ hợp Ctrl trước khi tới IME ở chế độ không-preedit.
+
+**Giới hạn còn lại:** từ Anh **ngắn (≤3 ký tự)** trùng âm Việt và chưa có trong
+dict vẫn bị đổi → bấm **Esc** để restore, nó tự nhớ cho lần sau.
 
 ### Bảo trì
 - Sửa engine → `make test` (kiểm) → `cmake --build build` → `sudo cmake --install build`
