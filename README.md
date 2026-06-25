@@ -21,7 +21,7 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
 | 2 | Addon fcitx5 in-process, KHÔNG preedit (ghi-đè surrounding text) | ✅ xong, đang dùng cạnh Lotus |
-| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển 2 tầng + restore (Esc) tự học | ✅ xong (81/81 test) |
+| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (82/82 test) |
 | — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
 
 **Nguyên tắc:** đơn giản nhất có thể, chỉ phục vụ một người, **không đụng Lotus**
@@ -29,21 +29,28 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 không server phụ, ghi-đè theo diff (chỉ phần đuôi đổi), không cửa sổ gợi ý.
 
 ### Auto Anh-Việt (Phase 3)
-Ba lớp, rẻ → mạnh:
+Mặc định nghiêng tiếng Việt; nhận diện tiếng Anh theo nhiều lớp, rẻ → mạnh:
 1. **Kiểm cấu trúc âm tiết** — chuỗi không phải âm tiết Việt hợp lệ (sai phụ âm
    đầu/cuối, >1 cụm nguyên âm) → nhả thô. Bắt `browser`, `file`, `password`…
 2. **Từ điển tiếng Anh 2 tầng** — chuỗi thô khớp từ Anh đã biết → nhả thô. Bắt
-   cả từ trùng cấu trúc Việt (`test`→`test` thay vì `tét`, `this`, `code`…).
-   - **base** (chỉ-đọc): `/usr/share/vgo/en-base.txt` (~8800 từ **≥4 ký tự** —
-     lọc ≥4 để tránh va chạm `cas`→cá, `mas`→má, `cos`→có…).
-   - **cá nhân** (tự nuôi): `~/.config/vgo/words.txt`, gộp với base khi tra.
-   - `VN_PRIORITY` (hardcode trong engine) giữ vài âm Việt thường: `cos`→có, `nos`→nó.
-3. **Restore = Esc** (khi đang gõ dở) — khoá từ về thô + **tự ghi vào
-   `words.txt`** (lần sau auto). Dùng phím **không-modifier** vì app (VS Code/
-   Telegram) nuốt tổ hợp Ctrl trước khi tới IME ở chế độ không-preedit.
+   cả từ trùng cấu trúc Việt (`test`/`this`/`code`/`list`/`cast`… giữ Anh, không mangle).
+   - base (chỉ-đọc): `/usr/share/vgo/en-base.txt` (~8800 từ).
+   - cá nhân (tự học qua Esc): `~/.config/vgo/words.txt`.
+3. **Danh sách ÉP-VIỆT** — ưu tiên **hơn** từ điển Anh, cho từ Việt trùng mặt chữ
+   một từ Anh (`been`→bên, `teen`→tên, `queen`→quên, `barn`→bản, `dans`→dán…).
+   - base (chỉ-đọc): `/usr/share/vgo/vn-base.txt`.
+   - cá nhân (tự học qua Esc): `~/.config/vgo/vn-words.txt`.
+   - thêm `VN_PRIORITY` hardcode trong engine: `cos`→có, `nos`→nó.
+4. **Esc = nút LẬT 2 CHIỀU** (khi đang gõ dở) — lật theo trạng thái hiện tại **và
+   tự nhớ**:
+   - đang ra Anh mà muốn Việt → Esc → về Việt (ghi `vn-words.txt`).
+   - đang ra Việt mà muốn Anh → Esc → về Anh (ghi `words.txt`).
+   - Dùng phím **không-modifier** vì app (VS Code/Telegram) nuốt tổ hợp Ctrl
+     trước khi tới IME ở chế độ không-preedit.
 
-**Giới hạn còn lại:** từ Anh **ngắn (≤3 ký tự)** trùng âm Việt và chưa có trong
-dict vẫn bị đổi → bấm **Esc** để restore, nó tự nhớ cho lần sau.
+**Bản chất:** va chạm Anh↔Việt là cùng phím khác ý → không tự đoán 100% được.
+Esc + tự nhớ là van chỉnh tay: gặp từ lệch (chiều nào cũng vậy) → Esc một phát
+là về đúng + nhớ cho lần sau.
 
 ### Bảo trì
 - Sửa engine → `make test` (kiểm) → `cmake --build build` → `sudo cmake --install build`
@@ -91,7 +98,8 @@ sau phụ âm cuối đều ra đúng (`toasn` và `toans` đều → `toán`).
 | dd | đ | | uow | ươ |
 
 `w` đứng một mình = chữ `w` (gõ `ư` bằng `uw`, đỡ phá tiếng Anh).
-Gõ lại phím điều khiển = undo + nhả chữ thật (`ass`→`as`, `aaa`→`aa`, `ddd`→`dd`).
+Gõ đúp **phím dấu thanh** (vd `thị`+`j` thừa) = lờ phím thừa, giữ nguyên từ
+(không ra `thijj`). Gõ lại **mũ/sừng/đ** = revert (`aaa`→`aa`, `ddd`→`dd`, `aww`→`aw`).
 
 ## Tham khảo
 
