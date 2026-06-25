@@ -71,11 +71,14 @@ int main() {
     dictAddWord("test");
     dictAddWord("this");
     dictAddWord("cos");   // cố tình thêm để chắc VN_PRIORITY vẫn thắng
+    dictAddWord("been");  // "been" trong dict Anh...
+    vnAddWord("been");    // ...nhưng ép-Việt ưu tiên -> phải ra "bên"
     const std::vector<Case> DCASES = {
         {"test", "test"},   // trong dict -> giữ thô, không thành "tét"
         {"this", "this"},   // -> không thành "thí"
         {"cos",  "có"},     // VN_PRIORITY: dù có trong dict vẫn ra "có"
         {"browser", "browser"},  // vẫn bắt theo cấu trúc (không cần dict)
+        {"been", "bên"},    // ép-Việt thắng từ điển Anh
     };
     for (auto& c : DCASES) {
         std::string got = typeString(c.keys, cfg);

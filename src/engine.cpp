@@ -376,6 +376,10 @@ std::unordered_set<std::string>& dictSet() {
     static std::unordered_set<std::string> s;
     return s;
 }
+std::unordered_set<std::string>& vnSet() {   // danh sách ép tiếng Việt
+    static std::unordered_set<std::string> s;
+    return s;
+}
 // Telex của vài từ Việt rất thường, trùng mặt chữ một từ Anh -> luôn giữ Việt.
 const std::set<std::string> VN_PRIORITY = { "cos", "nos" };  // "có", "nó"
 
@@ -405,12 +409,37 @@ bool dictContains(const std::string& w) {
     return dictSet().count(lower(w)) > 0;
 }
 
-std::string Engine::display() const {
-    if (forcedRaw_) return raw_;                       // nút restore
+void vnAddWord(const std::string& w) {
+    if (!w.empty()) vnSet().insert(lower(w));
+}
+void vnLoadFile(const std::string& path) {
+    std::ifstream f(path);
+    std::string line;
+    while (std::getline(f, line)) {
+        while (!line.empty() && (line.back()=='\r' || line.back()==' ' || line.back()=='\t'))
+            line.pop_back();
+        size_t i = 0;
+        while (i < line.size() && (line[i]==' ' || line[i]=='\t')) ++i;
+        if (i) line = line.substr(i);
+        if (!line.empty() && line[0] != '#') vnAddWord(line);
+    }
+}
+bool vnContains(const std::string& w) {
+    return vnSet().count(lower(w)) > 0;
+}
+
+// Từ đang gõ sẽ hiện ra dạng thô (Anh) hay bản tiếng Việt?
+bool Engine::isShowingRaw() const {
+    if (forcedRaw_) return true;                         // Esc ép thô
+    if (forcedVN_)  return false;                        // Esc ép Việt
     std::string low = lower(raw_);
-    if (!VN_PRIORITY.count(low) && dictContains(low))  // từ tiếng Anh đã biết
-        return raw_;
-    return plausible() ? preedit() : raw_;
+    if (VN_PRIORITY.count(low) || vnContains(low)) return false;  // ép Việt
+    if (dictContains(low)) return true;                  // từ điển Anh
+    return !plausible();                                 // còn lại: theo cấu trúc
+}
+
+std::string Engine::display() const {
+    return isShowingRaw() ? raw_ : preedit();
 }
 
 std::string typeString(const std::string& keys, Config cfg) {

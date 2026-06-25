@@ -44,33 +44,45 @@ int commonPrefixCp(const std::string &a, const std::string &b, size_t &offB) {
     return cp;
 }
 
-// Đường dẫn từ điển cá nhân (mày tự nuôi): $XDG_CONFIG_HOME/vgo/words.txt
-std::string userDictPath() {
+// Thư mục cấu hình cá nhân: $XDG_CONFIG_HOME/vgo (mặc định ~/.config/vgo)
+std::string cfgDir() {
     const char *xdg = getenv("XDG_CONFIG_HOME");
-    if (xdg && *xdg) return std::string(xdg) + "/vgo/words.txt";
+    if (xdg && *xdg) return std::string(xdg) + "/vgo";
     const char *home = getenv("HOME");
-    return std::string(home ? home : "") + "/.config/vgo/words.txt";
+    return std::string(home ? home : "") + "/.config/vgo";
 }
+std::string userDictPath()   { return cfgDir() + "/words.txt"; }     // học: tiếng Anh
+std::string userVNDictPath() { return cfgDir() + "/vn-words.txt"; }  // học: ép tiếng Việt
 
 bool g_dictLoaded = false;
 void loadDictOnce() {
     if (g_dictLoaded) return;
     g_dictLoaded = true;
-    vgo::dictLoadFile("/usr/share/vgo/en-base.txt");  // base chuẩn (ship sẵn)
-    vgo::dictLoadFile(userDictPath());                // lớp cá nhân (tự học)
+    vgo::dictLoadFile("/usr/share/vgo/en-base.txt");  // base Anh chuẩn (ship sẵn)
+    vgo::dictLoadFile(userDictPath());                // Anh: lớp cá nhân (tự học)
+    vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");    // ép-Việt: base (ship sẵn)
+    vgo::vnLoadFile(userVNDictPath());                // ép-Việt: lớp cá nhân (tự học)
 }
 
-// Nút restore "dạy" từ: thêm vào từ điển + ghi vào file cá nhân (nếu chưa có).
-void learnWord(std::string w) {
-    for (char &c : w) c = (char)std::tolower((unsigned char)c);
-    if (w.size() < 2 || vgo::dictContains(w)) return;
-    vgo::dictAddWord(w);
-    std::string path = userDictPath();
+void appendLine(const std::string &path, const std::string &w) {
     try {
         std::filesystem::create_directories(std::filesystem::path(path).parent_path());
     } catch (...) {}
     std::ofstream f(path, std::ios::app);
     if (f) f << w << "\n";
+}
+// Esc "dạy" từ: thêm vào danh sách tương ứng + ghi file cá nhân (nếu chưa có).
+void learnEnglish(std::string w) {
+    for (char &c : w) c = (char)std::tolower((unsigned char)c);
+    if (w.size() < 2 || vgo::dictContains(w)) return;
+    vgo::dictAddWord(w);
+    appendLine(userDictPath(), w);
+}
+void learnVN(std::string w) {
+    for (char &c : w) c = (char)std::tolower((unsigned char)c);
+    if (w.size() < 2 || vgo::vnContains(w)) return;
+    vgo::vnAddWord(w);
+    appendLine(userVNDictPath(), w);
 }
 
 } // namespace
@@ -135,14 +147,19 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     auto *state = ic->propertyFor(&factory_);
     Key key = keyEvent.key();
 
-    // Nút RESTORE (Esc khi đang gõ dở): khoá từ về thô + học vào từ điển cá nhân.
+    // Nút LẬT 2 CHIỀU (Esc khi đang gõ dở): Anh <-> Việt + tự nhớ.
     // Dùng phím không-modifier vì app nuốt tổ hợp Ctrl trước khi tới vgo.
     if (key.check(FcitxKey_Escape)) {
         if (!state->engine.empty()) {
             std::string word = state->engine.raw();
-            state->engine.forceRaw();
+            if (state->engine.isShowingRaw()) {   // đang ra Anh -> lật sang Việt
+                state->engine.forceVN();
+                learnVN(word);
+            } else {                              // đang ra Việt -> lật sang Anh
+                state->engine.forceRaw();
+                learnEnglish(word);
+            }
             render(ic, state);
-            learnWord(word);
             keyEvent.filterAndAccept();
             return;
         }

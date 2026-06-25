@@ -27,8 +27,9 @@ install(FILES "${CMAKE_SOURCE_DIR}/fcitx5/vgo-addon.conf" RENAME vgo.conf
         DESTINATION "${FCITX_INSTALL_PKGDATADIR}/addon")
 install(FILES "${CMAKE_SOURCE_DIR}/fcitx5/vgo.conf"
         DESTINATION "${FCITX_INSTALL_PKGDATADIR}/inputmethod")
-# Từ điển base (nhận diện tiếng Anh) -> /usr/share/vgo/en-base.txt
+# Từ điển base (Anh) + danh sách ép-Việt -> /usr/share/vgo/
 install(FILES "${CMAKE_SOURCE_DIR}/data/en-base.txt"
+              "${CMAKE_SOURCE_DIR}/data/vn-base.txt"
         DESTINATION "${FCITX_INSTALL_DATADIR}/vgo")
 install(FILES "${CMAKE_SOURCE_DIR}/fcitx5/vgo.svg" RENAME fcitx-vgo.svg
         DESTINATION "${FCITX_INSTALL_DATADIR}/icons/hicolor/scalable/apps")

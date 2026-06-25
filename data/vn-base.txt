@@ -1,0 +1,10 @@
+# Mặt chữ tiếng Anh trùng từ Việt thường -> ép biến đổi tiếng Việt.
+# (ưu tiên hơn từ điển Anh; Esc lúc gõ vẫn lật được từng từ)
+barn
+dans
+hans
+sans
+been
+teen
+queen
+seen

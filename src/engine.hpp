@@ -28,25 +28,28 @@ public:
 
     void key(char c);          // nạp 1 phím ASCII
     void backspace();          // xoá 1 ký tự cuối
-    void reset() { buf_.clear(); raw_.clear(); forcedRaw_ = false; }
+    void reset() { buf_.clear(); raw_.clear(); forcedRaw_ = false; forcedVN_ = false; }
     bool empty() const { return buf_.empty(); }
     std::string preedit() const;        // chuỗi đã biến đổi tiếng Việt (UTF-8)
     const std::string& raw() const { return raw_; }  // phím thô đã gõ
 
     // Có thể là một âm tiết tiếng Việt hợp lệ (hoặc tiền tố của một âm tiết)?
     bool plausible() const;
-    // Khoá từ đang gõ về dạng thô (nút restore): hết biến đổi tiếng Việt.
-    void forceRaw() { forcedRaw_ = true; }
+    // Nút lật 2 chiều (Esc): ép từ đang gõ về thô (Anh) hoặc về tiếng Việt.
+    void forceRaw() { forcedRaw_ = true; forcedVN_ = false; }
+    void forceVN()  { forcedVN_ = true;  forcedRaw_ = false; }
+    // Hiện tại từ đang gõ ra dạng thô (Anh) hay bản tiếng Việt?
+    bool isShowingRaw() const;
 
-    // Chuỗi để hiển thị (tầng tích hợp dùng cái này — tự xử tiếng Anh lẫn lộn):
-    //   forceRaw / từ có trong từ điển Anh -> thô; plausible -> tiếng Việt; còn lại -> thô.
+    // Chuỗi để hiển thị (tầng tích hợp dùng cái này): isShowingRaw ? thô : tiếng Việt.
     std::string display() const;
 
 private:
     Config cfg_;
     std::u32string buf_;       // buffer đã biến đổi
     std::string raw_;          // phím thô đã gõ (cho fallback tiếng Anh)
-    bool forcedRaw_ = false;   // nút restore đã khoá từ này về thô
+    bool forcedRaw_ = false;   // Esc đã ép từ này về thô (Anh)
+    bool forcedVN_ = false;    // Esc đã ép từ này về tiếng Việt
 
     void appendLiteral(char c);
     void normalizeTone();
@@ -63,6 +66,12 @@ private:
 void dictAddWord(const std::string& w);          // thêm 1 từ (lowercase hoá)
 void dictLoadFile(const std::string& path);      // nạp file, mỗi dòng 1 từ; thiếu file thì bỏ qua
 bool dictContains(const std::string& w);         // tra (lowercase)
+
+// ---- Danh sách ÉP TIẾNG VIỆT (ưu tiên hơn từ điển Anh) ----
+// Từ Việt có mặt chữ trùng một từ Anh (vd "been"->bên) -> ép biến đổi Việt.
+void vnAddWord(const std::string& w);
+void vnLoadFile(const std::string& path);
+bool vnContains(const std::string& w);
 
 // Tiện ích cho test/CLI: nạp cả chuỗi phím, tự commit khi gặp ký tự không phải chữ.
 std::string typeString(const std::string& keys, Config cfg = {});

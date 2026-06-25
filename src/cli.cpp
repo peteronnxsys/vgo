@@ -8,9 +8,11 @@
 
 int main(int argc, char** argv) {
     vgo::Config cfg;
-    // nạp từ điển nếu có (chạy từ repo: data/en-base.txt; hoặc bản đã cài)
+    // nạp từ điển nếu có (chạy từ repo: data/*.txt; hoặc bản đã cài)
     vgo::dictLoadFile("data/en-base.txt");
     vgo::dictLoadFile("/usr/share/vgo/en-base.txt");
+    vgo::vnLoadFile("data/vn-base.txt");
+    vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");
     if (argc > 1) {
         for (int i = 1; i < argc; ++i) {
             if (i > 1) std::printf(" ");
