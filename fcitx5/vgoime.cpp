@@ -54,6 +54,16 @@ std::string cfgDir() {
 std::string userDictPath()   { return cfgDir() + "/words.txt"; }     // học: tiếng Anh
 std::string userVNDictPath() { return cfgDir() + "/vn-words.txt"; }  // học: ép tiếng Việt
 
+// App nền Chromium/Electron (Chrome, VS Code, Slack…) cài đặt surrounding-text
+// xoá lỗi -> phải dùng preedit cho chúng.
+bool isChromiumApp(const std::string &prog) {
+    std::string p;
+    for (char c : prog) p += (char)std::tolower((unsigned char)c);
+    auto has = [&](const char *s) { return p.find(s) != std::string::npos; };
+    return has("chrom") || has("electron") || has("slack") ||
+           has("discord") || has("code");
+}
+
 bool g_dictLoaded = false;
 void loadDictOnce() {
     if (g_dictLoaded) return;
@@ -98,7 +108,10 @@ VgoEngine::VgoEngine(Instance *instance)
 // hoặc fallback preedit nếu app không hỗ trợ surrounding text.
 void VgoEngine::render(InputContext *ic, VgoState *state) {
     std::string next = state->engine.display();
-    if (ic->capabilityFlags().test(CapabilityFlag::SurroundingText)) {
+    // Chromium/Electron: surrounding-text xoá lỗi -> dùng preedit (else-branch).
+    bool canCommit = ic->capabilityFlags().test(CapabilityFlag::SurroundingText) &&
+                     !isChromiumApp(ic->program());
+    if (canCommit) {
         size_t offB = 0;
         int common = commonPrefixCp(state->shown, next, offB);
         int toDelete = cpCount(state->shown) - common;
