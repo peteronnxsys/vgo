@@ -20,7 +20,7 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 | Phase | Nội dung | Trạng thái |
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
-| 2 | Addon fcitx5 in-process, KHÔNG preedit (ghi-đè surrounding text) | ✅ xong, đang dùng cạnh Lotus |
+| 2 | Addon fcitx5 in-process, KHÔNG preedit (Chromium/Electron: preedit) | ✅ xong, đang dùng cạnh Lotus |
 | 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (82/82 test) |
 | — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
 
@@ -64,6 +64,15 @@ gõ tiếng Việt chết trong app đó (vgo, Lotus, *mọi* bộ gõ — KHÔN
 Triệu chứng: gõ được ở browser/editor nhưng app sandbox thì không.
 - Ví dụ đã gặp: **Telegram snap** → đổi sang bản **tĩnh** telegram.org
   (`~/.local/opt/Telegram`, không sandbox, tự cập nhật) là gõ được.
+
+### Lưu ý: app Chromium/Electron dùng preedit
+Chrome, VS Code, Slack, Electron… cài đặt surrounding-text **xoá lỗi** (cả
+`deleteSurroundingText` lẫn forward-backspace đều không ăn) → ghi-đè theo diff bị
+dồn: `các`→`caác`, `được`→`dđuoươợc`. Giải: nhận diện qua `program()` (chứa
+`chrom`/`electron`/`code`/`slack`/`discord`) → ép **preedit** (chạy đúng như
+terminal); app khác giữ no-preedit (commit, autofill OK). Preedit không phá
+autofill Chrome (đã kiểm). Gặp app Chromium lạ → thêm vào `isChromiumApp()` trong
+`fcitx5/vgoime.cpp`.
 
 ### Phase 2 cần (một lần, có sudo)
 
