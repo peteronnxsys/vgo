@@ -37,7 +37,7 @@ static const std::vector<Case> CASES = {
     {"toasn", "toán"},  // gõ dấu trước phụ âm cuối -> phải dời
     // --- gõ đúp phím điều khiển ---
     {"aaa", "aa"},      // mũ (aa->â) gõ lần 3: revert -> "aa"
-    {"thijj", "thị"},   // dấu gõ đúp (fat-finger): lờ phím thừa -> giữ "thị"
+    {"thijj", "thijj"}, // B (chuẩn Telex): double dấu = bỏ dấu + chữ thật -> "thij" thô; Backspace cứu
     {"ddd", "ddd"},     // "dd" không phải tiền tố phụ âm đầu -> thô
     {"aww", "aww"},     // "aw": coda 'w' không hợp lệ -> thô
     // --- tiếng Anh lẫn lộn: phải GIỮ NGUYÊN (không mangle) ---
