@@ -107,8 +107,9 @@ sau phụ âm cuối đều ra đúng (`toasn` và `toans` đều → `toán`).
 | dd | đ | | uow | ươ |
 
 `w` đứng một mình = chữ `w` (gõ `ư` bằng `uw`, đỡ phá tiếng Anh).
-Gõ đúp **phím dấu thanh** (vd `thị`+`j` thừa) = lờ phím thừa, giữ nguyên từ
-(không ra `thijj`). Gõ lại **mũ/sừng/đ** = revert (`aaa`→`aa`, `ddd`→`dd`, `aww`→`aw`).
+Gõ đúp **phím dấu thanh** (s/f/r/x/j) = **bỏ dấu + nhả chữ thật** (chuẩn Telex như
+UniKey/phone/Lotus) → "thoát" từ có dấu về thô. Lỡ tay thì **Backspace** lùi đúng
+1 phím là về lại. Gõ lại **mũ/sừng/đ** = revert (`aaa`→`aa`, `ddd`→`dd`, `aww`→`aw`).
 
 ## Tham khảo
 
