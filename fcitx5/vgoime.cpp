@@ -196,8 +196,11 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
             showPreedit(ic, state);
             keyEvent.filterAndAccept();
         } else {
-            state->engine.reset();
-            state->shown.clear();
+            // No-preedit: lùi 1 phím rồi GHI-ĐÈ lại app text (cùng cơ chế gõ thường),
+            // KHÔNG reset — để "bị"+lỡ'x'="bĩ" backspace về "bị" thay vì để app tụt xuống "b".
+            state->engine.backspace();
+            render(ic, state);   // diff-overwrite: sửa đuôi; rỗng thì render xoá nốt
+            keyEvent.filterAndAccept();
         }
         return;
     }

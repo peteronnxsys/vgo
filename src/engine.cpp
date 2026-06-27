@@ -328,9 +328,16 @@ void Engine::key(char c) {
 }
 
 void Engine::backspace() {
-    if (!buf_.empty()) buf_.pop_back();
-    if (!raw_.empty()) raw_.pop_back();
-}
+    if (raw_.empty()) {                  // không còn phím thô -> xoá ghép cuối (an toàn)
+        if (!buf_.empty()) buf_.pop_back();
+        return;
+    }
+    std::string r = raw_;
+    r.pop_back();                        // bỏ ĐÚNG phím thô cuối (kể cả phím lỡ dư)
+    raw_.clear();
+    buf_.clear();
+    for (char c : r) key(c);             // DỰNG LẠI buf_ + raw_ từ chuỗi phím còn lại
+}                                        // "bị"+lỡ'x'="bĩ" -> backspace -> "bị" (không tụt "bi"/"b")
 
 std::string Engine::preedit() const {
     std::string out;

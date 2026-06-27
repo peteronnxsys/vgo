@@ -87,6 +87,26 @@ int main() {
                                    c.keys, got.c_str(), c.want); }
     }
 
+    // --- backspace: bỏ phím lỡ dư rồi DỰNG LẠI (không tụt mất dấu, không lệch buf/raw) ---
+    struct BkCase { const char* keys; int nback; const char* want; };
+    const std::vector<BkCase> BK = {
+        {"bijx",   1, "bị"},   // "bị" lỡ thêm 'x'->"bĩ"; backspace bỏ 'x' -> về "bị"
+        {"bijs",   1, "bị"},   // lỡ 's'->"bí"; backspace -> "bị"
+        {"bij",    1, "bi"},   // không dư: backspace bỏ phím dấu 'j' -> "bi" (keystroke chuẩn)
+        {"vieejt", 1, "việ"},  // "việt" backspace bỏ 't' -> "việ"
+        {"bijx",   2, "bi"},   // bỏ 'x'->"bị", bỏ 'j'->"bi" (peel từng phím)
+        {"bijx",   3, "b"},    // bỏ 'x','j','i' -> "b"
+    };
+    for (auto& c : BK) {
+        Engine e(cfg);
+        for (char ch : std::string(c.keys)) e.key(ch);
+        for (int i = 0; i < c.nback; ++i) e.backspace();
+        std::string got = e.display();
+        if (got == c.want) ++pass;
+        else { ++fail; std::printf("FAIL(bksp) %s x%d -> got [%s]  want [%s]\n",
+                                   c.keys, c.nback, got.c_str(), c.want); }
+    }
+
     std::printf("\n%d passed, %d failed (%d total)\n", pass, fail, pass + fail);
     return fail ? 1 : 0;
 }
