@@ -115,7 +115,18 @@ void VgoEngine::render(InputContext *ic, VgoState *state) {
         size_t offB = 0;
         int common = commonPrefixCp(state->shown, next, offB);
         int toDelete = cpCount(state->shown) - common;
-        if (toDelete > 0) ic->deleteSurroundingText(-toDelete, toDelete);
+        if (toDelete > 0) {
+            // An toàn: KHÔNG xoá quá số ký tự thực có trước con trỏ. Nếu state->shown
+            // lệch pha với ô nhập thật (app tự xoá field, cursor nhảy, focus đổi, phím
+            // rớt qua RDP…), toDelete có thể lớn hơn text thật -> mutter
+            // meta_wayland_text_input_focus_delete_surrounding assert (before >= start)
+            // -> abort -> sập cả GNOME shell. Clamp theo surroundingText: xấu nhất chỉ
+            // sót vài ký tự (cosmetic), KHÔNG bao giờ sập session.
+            const auto &sur = ic->surroundingText();
+            if (sur.isValid() && toDelete > static_cast<int>(sur.cursor()))
+                toDelete = static_cast<int>(sur.cursor());
+            if (toDelete > 0) ic->deleteSurroundingText(-toDelete, toDelete);
+        }
         if (offB < next.size()) ic->commitString(next.substr(offB));
         state->shown = next;
         state->usingPreedit = false;
