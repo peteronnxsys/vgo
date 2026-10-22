@@ -317,7 +317,27 @@ bool Engine::handleCircum(char lc, char typed) {
                 normalizeTone();
                 return true;
             }
+            return false;
         }
+    }
+    // Không liền nhau: mũ cho nguyên âm cùng chữ trong cụm nguyên âm gần cuối
+    // ("toio"->"tôi", "tiene"->"tiên", "daua"->"đâu").
+    int end = n - 1;
+    while (end >= 0 && !isVowelChar(buf_[end])) --end;
+    if (end < 0) return false;
+    int start = end;
+    while (start > 0 && isVowelChar(buf_[start-1])) --start;
+    // "oe" mở + 'o' = vần "oeo" thật (ngoẹo, khoèo) -> chữ thường
+    if (lc == 'o' && end == n - 1 && end - start == 1 &&
+        decompose(buf_[start]).base == 'o' && decompose(buf_[end]).base == 'e')
+        return false;
+    for (int i = end; i >= start; --i) {
+        Decomp d = decompose(buf_[i]);
+        if (d.base != lc) continue;
+        if (d.mod != M_NONE) return false;  // đã có mũ/dấu phụ -> chữ thường
+        buf_[i] = compose(d.base, M_CIRC, d.tone, d.upper);
+        normalizeTone();
+        return true;
     }
     return false;
 }
@@ -327,6 +347,14 @@ bool Engine::handleDStroke(char typed) {
     if (n >= 1) {
         Decomp d = decompose(buf_[n-1]);
         if (d.base == 'd') {
+            // "dd" ở cuối từ bắt đầu bằng 'd' + nguyên âm -> đ đầu từ ("didd"->"đi")
+            Decomp d0 = decompose(buf_[0]);
+            if (d.mod == M_NONE && n >= 3 && d0.base == 'd' && d0.mod == M_NONE &&
+                isVowelChar(buf_[1])) {
+                buf_.pop_back();
+                buf_[0] = compose('d', M_STROKE, T_NONE, d0.upper);
+                return true;
+            }
             if (d.mod == M_NONE) {
                 buf_[n-1] = compose('d', M_STROKE, T_NONE, d.upper);
                 return true;

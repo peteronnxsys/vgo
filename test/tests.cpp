@@ -45,6 +45,12 @@ static const std::vector<Case> CASES = {
     {"thuowr", "thuở"}, {"huow", "huơ"}, {"quowr", "quở"},
     {"nguowif", "người"}, {"huowng", "hương"}, {"dduowcj", "được"},
     {"uoww", "uoww"},   // gõ lại w -> bỏ sừng cả cặp + chữ thật
+    // --- mũ / đ không liền nhau ---
+    {"toio", "tôi"}, {"tiene", "tiên"}, {"tienge", "tiêng"}, {"vietej", "việt"},
+    {"muonos", "muốn"}, {"uyene", "uyên"}, {"caya", "cây"},
+    {"ngoeoj", "ngoẹo"}, {"khoeof", "khoèo"},   // vần "oeo" thật: 'o' là chữ thường
+    {"didd", "đi"}, {"Didd", "Đi"}, {"dduongwf", "đường"}, {"duongwfdd", "đường"},
+    {"did", "did"},     // 1 chữ d sau nguyên âm: giữ thô (tiếng Anh)
     {"Cuarw", "Cửa"}, {"CUARW", "CỬA"},
     // --- gõ đúp phím điều khiển ---
     {"aaa", "aa"},      // mũ (aa->â) gõ lần 3: revert -> "aa"
@@ -53,7 +59,7 @@ static const std::vector<Case> CASES = {
     {"aww", "aww"},     // "aw": coda 'w' không hợp lệ -> thô
     // --- tiếng Anh lẫn lộn: phải GIỮ NGUYÊN (không mangle) ---
     {"browser", "browser"}, {"file", "file"}, {"password", "password"},
-    {"video", "video"}, {"data", "data"}, {"google", "google"},
+    {"video", "video"}, {"google", "google"},
     {"internet", "internet"}, {"javascript", "javascript"}, {"email", "email"},
     {"server", "server"}, {"debug", "debug"}, {"folder", "folder"},
     {"the", "the"}, {"they", "they"},
@@ -81,12 +87,14 @@ int main() {
     // --- từ điển tiếng Anh + VN priority (nạp từ vào dict rồi kiểm) ---
     dictAddWord("test");
     dictAddWord("this");
+    dictAddWord("data");  // không dict: "data" khớp khuôn "tiene" -> "dât"
     dictAddWord("cos");   // cố tình thêm để chắc VN_PRIORITY vẫn thắng
     dictAddWord("been");  // "been" trong dict Anh...
     vnAddWord("been");    // ...nhưng ép-Việt ưu tiên -> phải ra "bên"
     const std::vector<Case> DCASES = {
         {"test", "test"},   // trong dict -> giữ thô, không thành "tét"
         {"this", "this"},   // -> không thành "thí"
+        {"data", "data"},   // mũ không liền nhau: từ điển giữ Anh
         {"cos",  "có"},     // VN_PRIORITY: dù có trong dict vẫn ra "có"
         {"browser", "browser"},  // vẫn bắt theo cấu trúc (không cần dict)
         {"been", "bên"},    // ép-Việt thắng từ điển Anh

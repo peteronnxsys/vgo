@@ -21,7 +21,7 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
 | 2 | Addon fcitx5 in-process, KHÔNG preedit (Chromium/Electron: preedit) | ✅ xong, đang dùng cạnh Lotus |
-| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (115/115 test) |
+| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (129/129 test) |
 | — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
 
 **Nguyên tắc:** đơn giản nhất có thể, chỉ phục vụ một người, **không đụng Lotus**
@@ -110,6 +110,10 @@ sau phụ âm cuối đều ra đúng (`toasn` và `toans` đều → `toán`).
 `w` áp lên **cả cụm nguyên âm**, gõ sau phụ âm cuối vẫn đúng: `cuarw`→cửa, `thuongwr`→thưởng,
 `nguoiwf`→người, `ruouwj`→rượu. `uo`+`w` ở âm tiết mở → `uơ` (`thuowr`→thuở, `huow`→huơ),
 gõ tiếp chữ → tự thành `ươ` (`huowng`→hương). `qu`/`gi` đầu từ không nhận sừng (`quowr`→quở).
+Mũ / đ **không cần liền nhau**: `toio`→tôi, `tiene`→tiên, `muonos`→muốn; `dd` gõ cuối từ bắt đầu
+bằng `d` → đ đầu từ (`didd`→đi, `duongwddf`→đường). `did` (1 chữ d) giữ thô. Vần `oeo` thật
+(`ngoeoj`→ngoẹo) không bị biến thành mũ. Đánh đổi: từ Anh khớp khuôn (`dense`, `photo`, `data`)
+dựa vào từ điển Anh để giữ thô — từ lạ ngoài từ điển thì Esc.
 Gõ đúp **phím dấu thanh** (s/f/r/x/j) = **bỏ dấu + nhả chữ thật** (chuẩn Telex như
 UniKey/phone/Lotus) → "thoát" từ có dấu về thô. Lỡ tay thì **Backspace** lùi đúng
 1 phím là về lại. Gõ lại **mũ/sừng/đ** = revert (`aaa`→`aa`, `ddd`→`dd`, `aww`→`aw`).
