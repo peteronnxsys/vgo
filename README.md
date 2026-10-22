@@ -21,7 +21,7 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
 | 2 | Addon fcitx5 in-process, KHÔNG preedit (Chromium/Electron: preedit) | ✅ xong, đang dùng cạnh Lotus |
-| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (82/82 test) |
+| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (115/115 test) |
 | — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
 
 **Nguyên tắc:** đơn giản nhất có thể, chỉ phục vụ một người, **không đụng Lotus**
@@ -107,6 +107,9 @@ sau phụ âm cuối đều ra đúng (`toasn` và `toans` đều → `toán`).
 | dd | đ | | uow | ươ |
 
 `w` đứng một mình = chữ `w` (gõ `ư` bằng `uw`, đỡ phá tiếng Anh).
+`w` áp lên **cả cụm nguyên âm**, gõ sau phụ âm cuối vẫn đúng: `cuarw`→cửa, `thuongwr`→thưởng,
+`nguoiwf`→người, `ruouwj`→rượu. `uo`+`w` ở âm tiết mở → `uơ` (`thuowr`→thuở, `huow`→huơ),
+gõ tiếp chữ → tự thành `ươ` (`huowng`→hương). `qu`/`gi` đầu từ không nhận sừng (`quowr`→quở).
 Gõ đúp **phím dấu thanh** (s/f/r/x/j) = **bỏ dấu + nhả chữ thật** (chuẩn Telex như
 UniKey/phone/Lotus) → "thoát" từ có dấu về thô. Lỡ tay thì **Backspace** lùi đúng
 1 phím là về lại. Gõ lại **mũ/sừng/đ** = revert (`aaa`→`aa`, `ddd`→`dd`, `aww`→`aw`).

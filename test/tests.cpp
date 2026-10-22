@@ -35,6 +35,17 @@ static const std::vector<Case> CASES = {
     {"toansr", "toản"},  // t,o,a,n,s,r ? kiểm chuỗi dài
     {"loanx", "loãn"}, {"toans", "toán"}, {"uons", "uón"},
     {"toasn", "toán"},  // gõ dấu trước phụ âm cuối -> phải dời
+    // --- 'w' gõ sau (sau nguyên âm sau / phụ âm cuối): áp lên cả cụm nguyên âm ---
+    {"cuarw", "cửa"}, {"cuawr", "cửa"}, {"muaw", "mưa"}, {"giuawx", "giữa"},
+    {"guiwr", "gửi"}, {"toiw", "tơi"}, {"cuuws", "cứu"},
+    {"nguoiwf", "người"}, {"cuoiwf", "cười"}, {"ruouwj", "rượu"}, {"huouw", "hươu"},
+    {"thuongwr", "thưởng"}, {"dduongwf", "đường"}, {"nuocws", "nước"}, {"dduocwj", "được"},
+    {"hoawcj", "hoặc"}, {"quaw", "quă"}, {"quawn", "quăn"},
+    // --- "uo"+w mở -> "uơ"; có chữ theo sau -> "ươ"; "qu" không nhận sừng ---
+    {"thuowr", "thuở"}, {"huow", "huơ"}, {"quowr", "quở"},
+    {"nguowif", "người"}, {"huowng", "hương"}, {"dduowcj", "được"},
+    {"uoww", "uoww"},   // gõ lại w -> bỏ sừng cả cặp + chữ thật
+    {"Cuarw", "Cửa"}, {"CUARW", "CỬA"},
     // --- gõ đúp phím điều khiển ---
     {"aaa", "aa"},      // mũ (aa->â) gõ lần 3: revert -> "aa"
     {"thijj", "thijj"}, // B (chuẩn Telex): double dấu = bỏ dấu + chữ thật -> "thij" thô; Backspace cứu

@@ -229,44 +229,76 @@ bool Engine::handleRemoveTone(char typed) {
     return false;                         // không có dấu -> 'z' thường
 }
 
+// 'w' áp lên CẢ CỤM nguyên âm (không chỉ nguyên âm cuối), để gõ 'w' sau phụ âm
+// cuối / nguyên âm sau vẫn đúng: "cuarw"->"cửa", "thuongwr"->"thưởng", "nguoiwf"->"người".
 bool Engine::handleHorn(char typed) {
     int n = (int)buf_.size();
-    // "uo" -> "ươ" (sừng cả hai)
-    if (n >= 2) {
-        Decomp a = decompose(buf_[n-2]), b = decompose(buf_[n-1]);
-        if (a.base=='u'&&a.mod==M_NONE && b.base=='o'&&b.mod==M_NONE) {
-            buf_[n-2] = compose('u', M_HORN, a.tone, a.upper);
-            buf_[n-1] = compose('o', M_HORN, b.tone, b.upper);
+    int end = n - 1;                       // nguyên âm cuối của cụm
+    while (end >= 0 && !isVowelChar(buf_[end])) --end;
+    if (end < 0) {
+        if (cfg_.wAlwaysU) {               // không có nguyên âm áp dụng -> chèn ư
+            buf_ += compose('u', M_HORN, T_NONE, std::isupper((unsigned char)typed));
+            return true;
+        }
+        return false;
+    }
+    int start = end;
+    while (start > 0 && isVowelChar(buf_[start-1])) --start;
+    auto baseAt = [&](int i){ return decompose(buf_[i]).base; };
+    // âm đệm "qu" / "gi" + nguyên âm: u/i thuộc phụ âm đầu, không nhận sừng
+    if (start == 1 && end > 1 &&
+        ((baseAt(0)=='q' && baseAt(1)=='u') || (baseAt(0)=='g' && baseAt(1)=='i')))
+        start = 2;
+
+    std::vector<int> tg;                   // vị trí nhận dấu phụ
+    for (int i = start; i < end; ++i)
+        if (baseAt(i)=='u' && baseAt(i+1)=='o') { tg = {i, i+1}; break; }
+    if (tg.empty() && end > start) {
+        char b0 = baseAt(start), b1 = baseAt(start+1);
+        if (b0=='o' && b1=='a') tg = {start+1};                        // oă (hoặc)
+        else if ((b0=='u' && (b1=='a'||b1=='i'||b1=='u')) ||
+                 (b0=='o' && b1=='i')) tg = {start};                   // ưa ưi ưu ơi
+    }
+    if (tg.empty()) {                      // còn lại: nguyên âm cuối là a/o/u
+        char b = baseAt(end);
+        if (b!='a' && b!='o' && b!='u') return false;
+        tg = {end};
+    }
+
+    if (tg.size() == 2) {                  // cặp u-o
+        int u = tg[0], o = tg[1];
+        Decomp du = decompose(buf_[u]), dov = decompose(buf_[o]);
+        if (du.mod != M_NONE && du.mod != M_HORN) return false;
+        if (dov.mod == M_HORN) {           // gõ lại -> bỏ sừng cả cặp + chữ thật
+            buf_[u] = compose('u', M_NONE, du.tone, du.upper);
+            buf_[o] = compose('o', M_NONE, dov.tone, dov.upper);
+            appendLiteral(typed);
             normalizeTone();
             return true;
         }
-    }
-    // nguyên âm cuối là a/o/u
-    int v = -1;
-    for (int i = n-1; i >= 0; --i) if (isVowelChar(buf_[i])) { v = i; break; }
-    if (v >= 0) {
-        Decomp d = decompose(buf_[v]);
-        if (d.base=='a' || d.base=='o' || d.base=='u') {
-            int want = (d.base=='a') ? M_BREVE : M_HORN;
-            if (d.mod == want) {          // gõ lại -> bỏ sừng + chữ thật
-                buf_[v] = compose(d.base, M_NONE, d.tone, d.upper);
-                appendLiteral(typed);
-                normalizeTone();
-                return true;
-            }
-            if (d.mod == M_NONE) {
-                buf_[v] = compose(d.base, want, d.tone, d.upper);
-                normalizeTone();
-                return true;
-            }
-            return false;                 // đã có dấu phụ khác -> 'w' thường
-        }
-    }
-    if (cfg_.wAlwaysU) {                   // không có nguyên âm áp dụng -> chèn ư
-        buf_ += compose('u', M_HORN, T_NONE, std::isupper((unsigned char)typed));
+        if (dov.mod != M_NONE) return false;
+        // Âm tiết mở "uo"+w -> "uơ" (thuở, huơ); có chữ theo sau -> "ươ".
+        // "uơ" + chữ gõ tiếp sẽ được nâng thành "ươ" trong key().
+        int umod = (o == n - 1 && du.mod == M_NONE) ? M_NONE : M_HORN;
+        buf_[u] = compose('u', umod, du.tone, du.upper);
+        buf_[o] = compose('o', M_HORN, dov.tone, dov.upper);
+        normalizeTone();
         return true;
     }
-    return false;
+
+    int v = tg[0];
+    Decomp d = decompose(buf_[v]);
+    int want = (d.base=='a') ? M_BREVE : M_HORN;
+    if (d.mod == want) {                   // gõ lại -> bỏ sừng + chữ thật
+        buf_[v] = compose(d.base, M_NONE, d.tone, d.upper);
+        appendLiteral(typed);
+        normalizeTone();
+        return true;
+    }
+    if (d.mod != M_NONE) return false;     // đã có dấu phụ khác -> 'w' thường
+    buf_[v] = compose(d.base, want, d.tone, d.upper);
+    normalizeTone();
+    return true;
 }
 
 bool Engine::handleCircum(char lc, char typed) {
@@ -327,7 +359,18 @@ void Engine::key(char c) {
             handled = handleDStroke(c); break;
         default: break;
     }
-    if (!handled) { appendLiteral(c); normalizeTone(); }
+    if (!handled) {
+        appendLiteral(c);
+        // "uơ" (mở) + chữ gõ tiếp -> "ươ": "nguow"+"i" -> "ngươi", "huow"+"ng" -> "hương"
+        int n = (int)buf_.size();
+        if (n >= 3) {
+            Decomp du = decompose(buf_[n-3]), dov = decompose(buf_[n-2]);
+            bool afterQ = (n >= 4 && decompose(buf_[n-4]).base == 'q');
+            if (du.base=='u' && du.mod==M_NONE && dov.base=='o' && dov.mod==M_HORN && !afterQ)
+                buf_[n-3] = compose('u', M_HORN, du.tone, du.upper);
+        }
+        normalizeTone();
+    }
 }
 
 void Engine::backspace() {
