@@ -53,6 +53,7 @@ std::string cfgDir() {
 }
 std::string userDictPath()   { return cfgDir() + "/words.txt"; }     // học: tiếng Anh
 std::string userVNDictPath() { return cfgDir() + "/vn-words.txt"; }  // học: ép tiếng Việt
+std::string userBigramPath() { return cfgDir() + "/bigram.txt"; }    // bigram cá nhân (sửa tay)
 
 // App nền Chromium/Electron (Chrome, VS Code, Slack…) cài đặt surrounding-text
 // xoá lỗi -> phải dùng preedit cho chúng.
@@ -72,6 +73,8 @@ void loadDictOnce() {
     vgo::dictLoadFile(userDictPath());                // Anh: lớp cá nhân (tự học)
     vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");    // ép-Việt: base (ship sẵn)
     vgo::vnLoadFile(userVNDictPath());                // ép-Việt: lớp cá nhân (tự học)
+    vgo::bigramLoadFile("/usr/share/vgo/bigram-base.txt");  // ngữ cảnh từ trước: base
+    vgo::bigramLoadFile(userBigramPath());                  // ngữ cảnh: lớp cá nhân
 }
 
 void appendLine(const std::string &path, const std::string &w) {
@@ -93,6 +96,16 @@ void learnVN(std::string w) {
     if (w.size() < 2 || vgo::vnContains(w)) return;
     vgo::vnAddWord(w);
     appendLine(userVNDictPath(), w);
+}
+
+// Esc có từ trước -> chỉ nhớ ĐÚNG CẶP này (bigram), không nhớ cả từ:
+// lật "xe bus" sang Anh không làm "cho con bus" hết ra "bú".
+void learnBigram(std::string prev, std::string w, bool english) {
+    for (char &c : prev) c = (char)std::tolower((unsigned char)c);
+    for (char &c : w) c = (char)std::tolower((unsigned char)c);
+    if (w.size() < 2 || vgo::bigramLookup(prev, w) == (english ? 1 : -1)) return;
+    vgo::bigramAdd(prev, w, english);
+    appendLine(userBigramPath(), prev + " " + w + (english ? " en" : " vn"));
 }
 
 } // namespace
@@ -151,14 +164,17 @@ void VgoEngine::showPreedit(InputContext *ic, VgoState *state) {
     ic->updateUserInterface(UserInterfaceComponent::InputPanel);
 }
 
-void VgoEngine::finalize(InputContext *ic, VgoState *state) {
+// boundary = ký tự ranh giới vừa gõ (space, dấu câu) để giữ ngữ cảnh cho bigram;
+// 0 = phím khác (Enter, mũi tên, Ctrl+…) -> con trỏ có thể đã nhảy, bỏ ngữ cảnh.
+void VgoEngine::finalize(InputContext *ic, VgoState *state, uint32_t boundary) {
     if (state->usingPreedit && !state->engine.empty()) {
         ic->commitString(state->engine.display());
         ic->inputPanel().reset();
         ic->updatePreedit();
         ic->updateUserInterface(UserInterfaceComponent::InputPanel);
     }
-    state->engine.reset();
+    state->engine.endWord(boundary);
+    if (!boundary) state->engine.clearContext();
     state->shown.clear();
     state->usingPreedit = false;
 }
@@ -176,12 +192,13 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     if (key.check(FcitxKey_Escape)) {
         if (!state->engine.empty()) {
             std::string word = state->engine.raw();
+            const std::string &prev = state->engine.prev();  // rỗng = đầu dòng / mất ngữ cảnh
             if (state->engine.isShowingRaw()) {   // đang ra Anh -> lật sang Việt
                 state->engine.forceVN();
-                learnVN(word);
+                if (prev.empty()) learnVN(word); else learnBigram(prev, word, false);
             } else {                              // đang ra Việt -> lật sang Anh
                 state->engine.forceRaw();
-                learnEnglish(word);
+                if (prev.empty()) learnEnglish(word); else learnBigram(prev, word, true);
             }
             render(ic, state);
             keyEvent.filterAndAccept();
@@ -200,6 +217,7 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     // Backspace
     if (key.check(FcitxKey_BackSpace)) {
         if (state->engine.empty()) {
+            state->engine.clearContext();  // app xoá chữ đã chốt -> ngữ cảnh không còn đúng
             return;
         }
         if (state->usingPreedit) {
@@ -227,13 +245,15 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     }
 
     // Ranh giới từ (space, dấu câu, Enter, mũi tên…) -> chốt rồi cho đi tiếp.
-    finalize(ic, state);
+    bool printable = code >= 0x20 && code != 0x7f;
+    finalize(ic, state, printable ? code : 0);
 }
 
 void VgoEngine::reset(const InputMethodEntry &, InputContextEvent &event) {
     auto *ic = event.inputContext();
     auto *state = ic->propertyFor(&factory_);
     state->engine.reset();
+    state->engine.clearContext();
     state->shown.clear();
     state->usingPreedit = false;
     ic->inputPanel().reset();

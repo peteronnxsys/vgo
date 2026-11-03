@@ -29,6 +29,13 @@ public:
     void key(char c);          // nạp 1 phím ASCII
     void backspace();          // xoá 1 ký tự cuối
     void reset() { buf_.clear(); raw_.clear(); forcedRaw_ = false; forcedVN_ = false; }
+
+    // Ngữ cảnh (cho bigram + luật IN HOA): token vừa gõ xong, tách bằng khoảng trắng.
+    // endWord = chốt từ đang gõ trước ranh giới `boundary` (0 = không có) rồi reset().
+    // "it's been": tới lúc gõ "been" thì prev() == "it's".
+    void endWord(char32_t boundary);
+    void clearContext() { tok_.clear(); tokRaw_.clear(); prev_.clear(); prevRaw_.clear(); }
+    const std::string& prev() const { return prev_; }
     bool empty() const { return buf_.empty(); }
     std::string preedit() const;        // chuỗi đã biến đổi tiếng Việt (UTF-8)
     const std::string& raw() const { return raw_; }  // phím thô đã gõ
@@ -50,6 +57,9 @@ private:
     std::string raw_;          // phím thô đã gõ (cho fallback tiếng Anh)
     bool forcedRaw_ = false;   // Esc đã ép từ này về thô (Anh)
     bool forcedVN_ = false;    // Esc đã ép từ này về tiếng Việt
+    std::string tok_;          // token hiện tại (phần đã chốt, chưa gặp khoảng trắng)
+    std::string prev_;         // token trước (đã gặp khoảng trắng)
+    std::string tokRaw_, prevRaw_;  // như trên nhưng là phím thô ("has" dù đã hiện "há")
 
     void appendLiteral(char c);
     void normalizeTone();
@@ -72,6 +82,14 @@ bool dictContains(const std::string& w);         // tra (lowercase)
 void vnAddWord(const std::string& w);
 void vnLoadFile(const std::string& path);
 bool vnContains(const std::string& w);
+
+// ---- BIGRAM: từ trước + từ đang gõ -> ép Anh/Việt (thắng 2 danh sách trên; Esc thắng tất) ----
+// File: mỗi dòng "từ_trước phím_thô en|vn", vd "it's been en", "xe bus en".
+// từ_trước = chữ đã hiện ra (UTF-8, vd "đi"), phím_thô = Telex đã gõ.
+void bigramAdd(const std::string& prev, const std::string& raw, bool english);
+void bigramLoadFile(const std::string& path);
+// 1 = Anh, -1 = Việt, 0 = không có luật
+int bigramLookup(const std::string& prev, const std::string& raw);
 
 // Tiện ích cho test/CLI: nạp cả chuỗi phím, tự commit khi gặp ký tự không phải chữ.
 std::string typeString(const std::string& keys, Config cfg = {});

@@ -6,6 +6,7 @@
 #include <set>
 #include <fstream>
 #include <cctype>
+#include <sstream>
 
 namespace vgo {
 namespace {
@@ -461,6 +462,10 @@ std::unordered_set<std::string>& vnSet() {   // danh sách ép tiếng Việt
     static std::unordered_set<std::string> s;
     return s;
 }
+std::unordered_map<std::string, bool>& bigramMap() {   // "prev\traw" -> Anh?
+    static std::unordered_map<std::string, bool> m;
+    return m;
+}
 // Telex của vài từ Việt rất thường, trùng mặt chữ một từ Anh -> luôn giữ Việt.
 const std::set<std::string> VN_PRIORITY = { "cos", "nos" };  // "có", "nó"
 
@@ -509,13 +514,67 @@ bool vnContains(const std::string& w) {
     return vnSet().count(lower(w)) > 0;
 }
 
+void bigramAdd(const std::string& prev, const std::string& raw, bool english) {
+    if (!prev.empty() && !raw.empty()) bigramMap()[lower(prev) + "\t" + lower(raw)] = english;
+}
+void bigramLoadFile(const std::string& path) {
+    std::ifstream f(path);
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream in(line);
+        std::string prev, raw, lang;
+        if (in >> prev >> raw >> lang && (lang == "en" || lang == "vn"))
+            bigramAdd(prev, raw, lang == "en");
+    }
+}
+int bigramLookup(const std::string& prev, const std::string& raw) {
+    if (prev.empty()) return 0;
+    auto it = bigramMap().find(lower(prev) + "\t" + lower(raw));
+    if (it == bigramMap().end()) return 0;
+    return it->second ? 1 : -1;
+}
+
+namespace {
+// Từ IN HOA toàn bộ, ngắn (2–4 chữ): "NAS", "AWS"
+bool isShortAllCaps(const std::string& s) {
+    if (s.size() < 2 || s.size() > 4) return false;
+    for (char c : s) if (!std::isupper((unsigned char)c)) return false;
+    return true;
+}
+bool hasLower(const std::string& s) {
+    for (char c : s) if (std::islower((unsigned char)c)) return true;
+    return false;
+}
+} // namespace
+
+void Engine::endWord(char32_t boundary) {
+    tok_ += display();
+    tokRaw_ += raw_;
+    reset();
+    if (boundary == ' ' || boundary == '\t' || boundary == '\n' || boundary == 0) {
+        if (!tok_.empty()) { prev_ = tok_; prevRaw_ = tokRaw_; }
+        tok_.clear();
+        tokRaw_.clear();
+    } else {
+        encodeOne(tok_, boundary);
+        encodeOne(tokRaw_, boundary);
+    }
+}
+
 // Từ đang gõ sẽ hiện ra dạng thô (Anh) hay bản tiếng Việt?
 bool Engine::isShowingRaw() const {
     if (forcedRaw_) return true;                         // Esc ép thô
     if (forcedVN_)  return false;                        // Esc ép Việt
     std::string low = lower(raw_);
+    int b = bigramLookup(prev_, low);                    // ngữ cảnh: "xe bus", "it's been"
+    if (!b && prevRaw_ != prev_) b = bigramLookup(prevRaw_, low);  // "has" đã hiện "há"
+    if (b) return b > 0;
     if (VN_PRIORITY.count(low) || vnContains(low)) return false;  // ép Việt
     if (dictContains(low)) return true;                  // từ điển Anh
+    // Viết tắt IN HOA giữa câu thường ("mua NAS") -> thô. Câu IN HOA toàn bộ
+    // ("VIỆT NAM VÀ") / đầu dòng thì vẫn Việt: không có từ trước chữ thường.
+    if (isShortAllCaps(raw_) && hasLower(prev_)) return true;
     return !plausible();                                 // còn lại: theo cấu trúc
 }
 
@@ -531,7 +590,7 @@ std::string typeString(const std::string& keys, Config cfg) {
             e.key(ch);
         } else {
             out += e.display();
-            e.reset();
+            e.endWord((unsigned char)ch);
             out += ch;
         }
     }

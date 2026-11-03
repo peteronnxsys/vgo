@@ -8808,3 +8808,53 @@ zoning
 zoom
 zope
 zshops
+# --- Từ ngắn (≤3 ký tự) + từ bị luật "mũ không liền" bắt nhầm, CHỌN TAY ---
+# Base ở trên lọc ≥4 ký tự để tránh cas→cá, mas→má. Ở đây chỉ thêm từ Anh thông dụng
+# mà bản Telex-Việt vô nghĩa hoặc rất hiếm (rà từ top-10000 tần suất Anh).
+# CỐ Ý KHÔNG thêm (trùng từ Việt thường): as has its car own too six max las lee os
+#   low tax bar los sir mix arm gif cow bow bee tee ver tar uri bus (bus: để bigram lo)
+meme
+see
+are
+use
+yes
+usa
+our
+eye
+era
+ear
+per
+law
+art
+saw
+raw
+par
+apr
+mar
+is
+of
+or
+if
+us
+his
+her
+how
+now
+nor
+ups
+exp
+iso
+asp
+eur
+air
+box
+gas
+ext
+dir
+sys
+buf
+arc
+irc
+isp
+erp
+inf

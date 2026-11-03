@@ -11,6 +11,7 @@ Bộ gõ tiếng Việt cho Linux/fcitx5, viết từ đầu. Tách 2 lớp:
 ```sh
 make test     # build + chạy unit test (chỉ cần g++, không cần gì thêm)
 make          # build cả vgo-cli
+make test-vikey   # test cấp câu qua vgo-cli (có nạp data/*.txt): test/vikey-cases.txt
 ./vgo-cli "Tooi yeeu tieengs Vieejt"   # -> Tôi yêu tiếng Việt
 echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 ```
@@ -21,7 +22,7 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
 | 2 | Addon fcitx5 in-process, KHÔNG preedit (Chromium/Electron: preedit) | ✅ xong, đang dùng cạnh Lotus |
-| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (129/129 test) |
+| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (141/141 test) |
 | — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
 
 **Nguyên tắc:** đơn giản nhất có thể, chỉ phục vụ một người, **không đụng Lotus**
@@ -34,17 +35,29 @@ Mặc định nghiêng tiếng Việt; nhận diện tiếng Anh theo nhiều l�
    đầu/cuối, >1 cụm nguyên âm) → nhả thô. Bắt `browser`, `file`, `password`…
 2. **Từ điển tiếng Anh 2 tầng** — chuỗi thô khớp từ Anh đã biết → nhả thô. Bắt
    cả từ trùng cấu trúc Việt (`test`/`this`/`code`/`list`/`cast`… giữ Anh, không mangle).
-   - base (chỉ-đọc): `/usr/share/vgo/en-base.txt` (~8800 từ).
+   - base (chỉ-đọc): `/usr/share/vgo/en-base.txt` (~8800 từ ≥4 ký tự + ~45 từ
+     ngắn chọn tay ở cuối file: `see`/`is`/`of`/`are`/`yes`…).
    - cá nhân (tự học qua Esc): `~/.config/vgo/words.txt`.
 3. **Danh sách ÉP-VIỆT** — ưu tiên **hơn** từ điển Anh, cho từ Việt trùng mặt chữ
    một từ Anh (`been`→bên, `teen`→tên, `queen`→quên, `barn`→bản, `dans`→dán…).
    - base (chỉ-đọc): `/usr/share/vgo/vn-base.txt`.
    - cá nhân (tự học qua Esc): `~/.config/vgo/vn-words.txt`.
    - thêm `VN_PRIORITY` hardcode trong engine: `cos`→có, `nos`→nó.
-4. **Esc = nút LẬT 2 CHIỀU** (khi đang gõ dở) — lật theo trạng thái hiện tại **và
+4. **Ngữ cảnh từ trước (bigram)** — `từ_trước phím_thô en|vn`, thắng cả lớp 2 và
+   3 (Esc vẫn thắng tất): `it's been`→Anh nhưng `owr been`→ở bên; `xe bus`→Anh nhưng
+   `cho con bus`→bú. Từ trước tra theo cả chữ đã hiện lẫn phím thô (`has`/"há").
+   - base (chỉ-đọc): `/usr/share/vgo/bigram-base.txt`.
+   - cá nhân: `~/.config/vgo/bigram.txt` (Esc tự ghi, sửa tay được).
+   - Kèm luật **viết tắt IN HOA**: từ IN HOA 2–4 chữ, không ép-Việt, đứng sau một
+     từ có chữ thường → nhả thô (`mua NAS`). Câu IN HOA toàn bộ / đầu dòng vẫn ra
+     Việt (`VIỆT NAM VÀ`, `NAS` đầu dòng → NÁ).
+5. **Esc = nút LẬT 2 CHIỀU** (khi đang gõ dở) — lật theo trạng thái hiện tại **và
    tự nhớ**:
    - đang ra Anh mà muốn Việt → Esc → về Việt (ghi `vn-words.txt`).
    - đang ra Việt mà muốn Anh → Esc → về Anh (ghi `words.txt`).
+   - có từ đứng trước → chỉ nhớ **đúng cặp** đó (ghi `bigram.txt`, vd `xe bus en`),
+     không nhớ cả từ — để lật `xe bus` không làm `cho con bus` thành Anh luôn.
+     Đầu dòng / sau Enter, mũi tên, Ctrl… → nhớ cả từ như trên.
    - Dùng phím **không-modifier** vì app (VS Code/Telegram) nuốt tổ hợp Ctrl
      trước khi tới IME ở chế độ không-preedit.
 

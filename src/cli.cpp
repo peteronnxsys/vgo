@@ -13,6 +13,8 @@ int main(int argc, char** argv) {
     vgo::dictLoadFile("/usr/share/vgo/en-base.txt");
     vgo::vnLoadFile("data/vn-base.txt");
     vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");
+    vgo::bigramLoadFile("data/bigram-base.txt");
+    vgo::bigramLoadFile("/usr/share/vgo/bigram-base.txt");
     if (argc > 1) {
         for (int i = 1; i < argc; ++i) {
             if (i > 1) std::printf(" ");

@@ -36,7 +36,8 @@ public:
 private:
     void render(fcitx::InputContext *ic, VgoState *state);       // áp display() ra ô nhập
     void showPreedit(fcitx::InputContext *ic, VgoState *state);  // fallback
-    void finalize(fcitx::InputContext *ic, VgoState *state);     // chốt từ + dọn
+    void finalize(fcitx::InputContext *ic, VgoState *state,
+                  uint32_t boundary = 0);                        // chốt từ + dọn
 
     fcitx::Instance *instance_;
     fcitx::FactoryFor<VgoState> factory_;

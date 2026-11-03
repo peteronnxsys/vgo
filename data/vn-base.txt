@@ -8,3 +8,9 @@ been
 teen
 queen
 seen
+# Viết tắt chat (không nguyên âm -> cấu trúc âm tiết loại, phải ép): đc đt đk đh đg
+ddc
+ddt
+ddk
+ddh
+ddg

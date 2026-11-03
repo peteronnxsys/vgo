@@ -106,6 +106,32 @@ int main() {
                                    c.keys, got.c_str(), c.want); }
     }
 
+    // --- ngữ cảnh: bigram + luật IN HOA (từ trước) ---
+    bigramAdd("it's", "been", true);   // thắng ép-Việt "been"
+    bigramAdd("xe", "bus", true);
+    bigramAdd("has", "been", true);    // tra theo phím thô: "has" đã hiện "há"
+    bigramAdd("tooi", "test", false);  // bigram Việt thắng từ điển Anh
+    const std::vector<Case> XCASES = {
+        {"it's been", "it's been"},
+        {"owr been",  "ở bên"},        // không có luật -> ép-Việt như cũ
+        {"ddi xe bus", "đi xe bus"},
+        {"cho con bus", "cho con bú"},
+        {"has been", "há been"},
+        {"tooi test", "tôi tét"},
+        {"xe, bus",   "xe, bú"},       // dấu câu cắt token: từ trước là "xe,"
+        {"mua NAS",   "mua NAS"},      // viết tắt giữa câu thường -> thô
+        {"NAS",       "NÁ"},           // đầu dòng: không có ngữ cảnh -> Việt
+        {"VIEETJ NAM VAF", "VIỆT NAM VÀ"},  // câu IN HOA -> vẫn Việt
+        {"mua COS",   "mua CÓ"},       // VN_PRIORITY thắng luật IN HOA
+        {"mua DDAAUF", "mua ĐẦU"},     // >4 chữ: không áp luật
+    };
+    for (auto& c : XCASES) {
+        std::string got = typeString(c.keys, cfg);
+        if (got == c.want) ++pass;
+        else { ++fail; std::printf("FAIL(ctx) %-14s -> got [%s]  want [%s]\n",
+                                   c.keys, got.c_str(), c.want); }
+    }
+
     // --- backspace: bỏ phím lỡ dư rồi DỰNG LẠI (không tụt mất dấu, không lệch buf/raw) ---
     struct BkCase { const char* keys; int nback; const char* want; };
     const std::vector<BkCase> BK = {

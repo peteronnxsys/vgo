@@ -1,0 +1,42 @@
+# Test hồi quy cấp câu (nguồn: release notes Vikey 1.0.11–1.0.30 + bài GenK).
+# Định dạng: ID|phím Telex|kỳ vọng. Chạy: make test-vikey
+# A — ví dụ bài báo GenK
+A1|goodnight moij nguwowif|goodnight mọi người
+A2|happy birthday chij nhes|happy birthday chị nhé
+A3|order traf suwax nhes|order trà sữa nhé
+A4|good morning car nhaf|good morning cả nhà
+A5|I love phowr|I love phở
+A6|thanks, camr own nhieeuf|thanks, cảm ơn nhiều
+# B — từ Anh giữ nguyên
+B1|visa|visa
+B2|meme|meme
+B3|deepseek|deepseek
+B4|web(|web(
+B5|mua NAS|mua NAS
+B6|see you|see you
+B7|more|more
+B8|xin hello|xin hello
+B9|pneumonoultramicroscopicsilicovolcanoconiosis|pneumonoultramicroscopicsilicovolcanoconiosis
+B10|video call this|video call this
+# C — từ Việt / viết hoa / trùng Anh
+C1|treen|trên
+C2|DDaf Nawngx|Đà Nẵng
+C3|VIEETJ NAM|VIỆT NAM
+C4|nos sex ddi|nó sẽ đi
+C5|test cos work|test có work
+C6|em sex optimize|em sẽ optimize
+C7|thanks aj|thanks ạ
+C8|ddc|đc
+C9|ddt|đt
+# D — số dính chữ
+D1|5trawm|5trăm
+D2|mua 1casi|mua 1cái
+D3|100W|100W
+# E — cần ngữ cảnh
+E1|owr been|ở bên
+E2|it's been|it's been
+E3|cho con bus|cho con bú
+E4|ddi xe bus|đi xe bus
+E5|la vowsi os|la với ó
+E6|vaof office its nhaats|vào office ít nhất
+E7|lats nuwxa|lát nữa
