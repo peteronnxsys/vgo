@@ -160,6 +160,52 @@ int main() {
                                    c.keys, got.c_str(), c.want); }
     }
 
+    // --- tự sửa 1 lỗi gõ (mô hình LatinIME + từ điển âm tiết; nguồn: từ thật phải Esc ép tay) ---
+    vnLexLoadFile("data/vn-syllables.txt");   // chạy từ gốc repo (make test)
+    if (vnLexCount("không") == 0) { ++fail; std::printf("FAIL(typo) thiếu data/vn-syllables.txt\n"); }
+    dictAddWord("roof"); dictAddWord("warn");
+    const std::vector<Case> TCASES = {
+        // gõ đúp phụ âm (LatinIME INSERTION_COST_SAME_CHAR)
+        {"ccofn", "còn"}, {"nhhir", "nhỉ"}, {"rroofi", "rồi"}, {"thhasng", "tháng"},
+        {"nnafo", "nào"}, {"lluwu", "lưu"}, {"Ccofn", "Còn"}, {"hheest", "hết"},
+        // phím đầu chạm trượt sang phím kề (INSERTION_COST_PROXIMITY_CHAR)
+        {"jkhas", "khá"}, {"cghuwa", "chưa"}, {"rtreen", "trên"}, {"bnos", "nó"},
+        {"cvaf", "và"},
+        {"cvuj", "vụ"},          // vụ (26661) >> cụ (2030): tần suất quyết, không mơ hồ
+        // nguyên âm gõ sớm kẹp giữa phụ âm đầu
+        {"nahawns", "nhắn"},
+        {"tooi ccaafn lluwu", "tôi cần lưu"},
+        // KHÔNG sửa
+        {"thanjt", "thanjt"},    // phím lạc sau nguyên âm: thật? thạnh? -> để thô
+        {"alafm", "alafm"},      // nguyên âm thừa đầu từ: lẫn từ Anh ("emoji", "ether")
+        {"emoji", "emoji"}, {"ether", "ether"},
+        {"rthi", "rthi"},        // từ ngắn: điểm dưới ngưỡng 0.185
+        {"rroof", "rroof"},      // ứng viên "roof" là từ Anh
+        {"warns", "warns"},      // biến tố của từ Anh "warn"
+        {"xuoowsng", "xuoowsng"},// không xoá nửa cặp oo (đổi dấu -> "xướng" sai)
+        {"hurry", "hurry"}, {"lasso", "lasso"},  // đúp phím thanh sau nguyên âm = hoàn tác Telex
+        {"kohng", "kohng"},      // không sửa đảo phím (đưa 'w'/'s' ra sau nguyên âm -> dấu)
+        {"butt", "butt"}, {"abet", "abet"}, {"brats", "brats"}, {"sway", "sway"},
+        {"for", "for"},
+    };
+    for (auto& c : TCASES) {
+        std::string got = typeString(c.keys, cfg);
+        if (got == c.want) ++pass;
+        else { ++fail; std::printf("FAIL(typo) %-14s -> got [%s]  want [%s]\n",
+                                   c.keys, got.c_str(), c.want); }
+    }
+    {   // Esc = van hoàn tác: từ đã tự sửa lật về đúng phím thô
+        Engine e(cfg);
+        for (char ch : std::string("ccofn")) e.key(ch);
+        bool ok = e.display() == "còn" && !e.isShowingRaw();
+        e.forceRaw();
+        ok = ok && e.display() == "ccofn";
+        e.forceVN();
+        ok = ok && e.display() == "còn";
+        if (ok) ++pass;
+        else { ++fail; std::printf("FAIL(typo) Esc lật ccofn <-> còn\n"); }
+    }
+
     // --- backspace: bỏ phím lỡ dư rồi DỰNG LẠI (không tụt mất dấu, không lệch buf/raw) ---
     struct BkCase { const char* keys; int nback; const char* want; };
     const std::vector<BkCase> BK = {

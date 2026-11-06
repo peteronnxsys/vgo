@@ -2,5 +2,6 @@
 build/
 vgo-test
 vgo-cli
+mklex
 *.o
 *.so

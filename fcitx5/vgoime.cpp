@@ -8,6 +8,7 @@
 #include <fcitx/addoninstance.h>
 #include <fcitx-utils/key.h>
 #include <fcitx-utils/keysym.h>
+#include <fcitx-utils/utf8.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputpanel.h>
 #include <fcitx/text.h>
@@ -73,6 +74,7 @@ void loadDictOnce() {
     vgo::dictLoadFile(userDictPath());                // Anh: lớp cá nhân (tự học)
     vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");    // ép-Việt: base (ship sẵn)
     vgo::vnLoadFile(userVNDictPath());                // ép-Việt: lớp cá nhân (tự học)
+    vgo::vnLexLoadFile("/usr/share/vgo/vn-syllables.txt");  // âm tiết + tần suất: tự sửa gõ nhầm
     vgo::bigramLoadFile("/usr/share/vgo/bigram-base.txt");  // ngữ cảnh từ trước: base
     vgo::bigramLoadFile(userBigramPath());                  // ngữ cảnh: lớp cá nhân
 }
@@ -190,6 +192,15 @@ void VgoEngine::showPreedit(InputContext *ic, VgoState *state) {
 // boundary = ký tự ranh giới vừa gõ (space, dấu câu) để giữ ngữ cảnh cho bigram;
 // 0 = phím khác (Enter, mũi tên, Ctrl+…) -> con trỏ có thể đã nhảy, bỏ ngữ cảnh.
 void VgoEngine::finalize(InputContext *ic, VgoState *state, uint32_t boundary) {
+    // Chốt bản tự sửa bằng space/dấu câu -> cho phép Backspace hoàn tác (chỉ chế độ
+    // surrounding; preedit = Chromium, xoá text đã commit không tin được).
+    state->canRevert = boundary && !state->usingPreedit && !state->engine.empty() &&
+                       state->engine.isCorrected();
+    if (state->canRevert) {
+        state->revRaw = state->engine.raw();
+        state->revShown = state->engine.display();
+        state->revSep = utf8::UCS4ToUTF8(boundary);
+    }
     if (state->usingPreedit && !state->engine.empty()) {
         ic->commitString(state->engine.display());
         ic->inputPanel().reset();
@@ -202,6 +213,31 @@ void VgoEngine::finalize(InputContext *ic, VgoState *state, uint32_t boundary) {
     state->usingPreedit = false;
 }
 
+// Backspace ngay sau khi chốt bản tự sửa: thay "còn " bằng "ccofn " (LatinIME
+// revertCommit). Chỉ làm khi text thật trước con trỏ khớp ĐÚNG cái đã chốt — lệch pha
+// (app tự sửa text, con trỏ nhảy, phím rớt qua RDP) thì trả false để Backspace thường,
+// không bao giờ xoá mù (xem clamp trong render()). Không học gì: lỡ tay 1 lần không được
+// tắt vĩnh viễn tự sửa cho từ đó; muốn dạy thì Esc.
+bool VgoEngine::revertCorrection(InputContext *ic, VgoState *state) {
+    if (!state->canRevert) return false;
+    state->canRevert = false;
+    const std::string committed = state->revShown + state->revSep;
+    const auto &sur = ic->surroundingText();
+    if (!sur.isValid() || sur.anchor() != sur.cursor()) return false;
+    const std::string &text = sur.text();
+    size_t cur = 0;
+    for (unsigned i = 0; i < sur.cursor() && cur < text.size(); ++i)
+        cur += cpLen((unsigned char)text[cur]);
+    if (cur < committed.size() ||
+        text.compare(cur - committed.size(), committed.size(), committed) != 0)
+        return false;
+    int len = cpCount(committed);
+    ic->deleteSurroundingText(-len, len);
+    ic->commitString(state->revRaw + state->revSep);
+    state->engine.clearContext();
+    return true;
+}
+
 void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     if (keyEvent.isRelease()) {
         return;
@@ -209,6 +245,8 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     auto *ic = keyEvent.inputContext();
     auto *state = ic->propertyFor(&factory_);
     Key key = keyEvent.key();
+    // Hoàn tác tự sửa chỉ dành cho Backspace NGAY sau khi chốt
+    if (!key.check(FcitxKey_BackSpace)) state->canRevert = false;
 
     // Nút LẬT 2 CHIỀU (Esc khi đang gõ dở): Anh <-> Việt + tự nhớ.
     // Dùng phím không-modifier vì app nuốt tổ hợp Ctrl trước khi tới vgo.
@@ -217,8 +255,13 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
             std::string word = state->engine.raw();
             const std::string &prev = state->engine.prev();  // rỗng = đầu dòng / mất ngữ cảnh
             if (state->engine.isShowingRaw()) {   // đang ra Anh -> lật sang Việt
+                // Chỉ LƯU khi bản Việt là âm tiết (hoặc tiền tố) hợp lệ / viết tắt không
+                // nguyên âm ("đc"). Gõ nhầm ("ccofn") thì lật lần này thôi: lưu typo chỉ
+                // làm bẩn danh sách — tự sửa gõ nhầm đã lo phần đó.
+                bool keep = state->engine.plausible() ||
+                            word.find_first_of("aeiouyAEIOUY") == std::string::npos;
                 state->engine.forceVN();
-                if (prev.empty()) learnVN(word); else learnBigram(prev, word, false);
+                if (keep) { if (prev.empty()) learnVN(word); else learnBigram(prev, word, false); }
             } else {                              // đang ra Việt -> lật sang Anh
                 state->engine.forceRaw();
                 if (prev.empty()) learnEnglish(word); else learnBigram(prev, word, true);
@@ -240,6 +283,10 @@ void VgoEngine::keyEvent(const InputMethodEntry &, KeyEvent &keyEvent) {
     // Backspace
     if (key.check(FcitxKey_BackSpace)) {
         if (state->engine.empty()) {
+            if (revertCorrection(ic, state)) {
+                keyEvent.filterAndAccept();
+                return;
+            }
             state->engine.clearContext();  // app xoá chữ đã chốt -> ngữ cảnh không còn đúng
             return;
         }

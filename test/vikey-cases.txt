@@ -40,3 +40,9 @@ E4|ddi xe bus|đi xe bus
 E5|la vowsi os|la với ó
 E6|vaof office its nhaats|vào office ít nhất
 E7|lats nuwxa|lát nữa
+# F — tự sửa 1 lỗi gõ (đúp / trượt phím kề / nguyên âm sớm), không chắc thì để thô
+F1|rroofi thhif tooi ccaafn lluwu file nayf|rồi thì tôi cần lưu file này
+F2|nnafo ddi thhasng sau nhhir|nào đi tháng sau nhỉ
+F3|cvuj thanjt|vụ thanjt
+F4|grep fret sway emoji warns|grep fret sway emoji warns
+F5|bnos nahawns cghuwa|nó nhắn chưa

@@ -61,6 +61,23 @@ Mặc định nghiêng tiếng Việt; nhận diện tiếng Anh theo nhiều l�
    - Dùng phím **không-modifier** vì app (VS Code/Telegram) nuốt tổ hợp Ctrl
      trước khi tới IME ở chế độ không-preedit.
 
+6. **Tự sửa gõ nhầm 1 phím** (mô hình AOSP LatinIME, chỉ khi đường cũ sắp nhả thô vì
+   chuỗi không phải âm tiết Việt và không phải từ Anh): xoá 1 phím thừa rồi gõ lại qua
+   engine, chỉ nhận âm tiết **có trong** `/usr/share/vgo/vn-syllables.txt` (~6.2k âm
+   tiết + tần suất, lọc từ FrequencyWords vi_50k bằng `make lex`). Chấm điểm theo chi
+   phí lỗi + độ hiếm của LatinIME, ngưỡng 0.185 ("modest"), bản nhì sát nút thì thôi.
+   - Nhận: phụ âm gõ đúp (`ccofn`→còn, `nhhir`→nhỉ), phím đầu trượt sang phím kề
+     (`jkhas`→khá, `bnos`→nó, `cghuwa`→chưa), nguyên âm gõ sớm kẹp giữa phụ âm đầu
+     (`nahawns`→nhắn).
+   - Không làm (đo trên 74.7k từ `/usr/share/dict/words`): thay phím / chèn phím /
+     đảo phím — song ngữ thì từ Anh nào cũng cách 1 âm tiết Việt đúng 1 phím thay
+     (1.279/1.314 ca sửa nhầm); xoá ở đuôi từ (đuôi `-s`/`-rs` tiếng Anh, hoàn tác
+     Telex `thijj`); dạng biến tố của từ Anh (`warns`). Còn lại: 2 tên riêng.
+   - Hiện ngay lúc gõ; **Esc** lật về đúng phím thô. **Backspace ngay sau khi chốt**
+     (space/dấu câu) bản tự sửa → trả lại phím thô (như LatinIME `revertCommit`;
+     chỉ khi text trước con trỏ khớp đúng, không thì Backspace thường). Hoàn tác
+     không ghi file học; Esc lật sang Việt cũng không lưu từ gõ nhầm.
+
 **Bản chất:** va chạm Anh↔Việt là cùng phím khác ý → không tự đoán 100% được.
 Esc + tự nhớ là van chỉnh tay: gặp từ lệch (chiều nào cũng vậy) → Esc một phát
 là về đúng + nhớ cho lần sau.
@@ -136,3 +153,8 @@ UniKey/phone/Lotus) → "thoát" từ có dấu về thô. Lỡ tay thì **Backs
 - [Bamboo](https://github.com/BambooEngine/bamboo) — engine Go + `fcitx5-bamboo` (ref sát nhất cho fcitx5).
 - [Bogo](https://github.com/BoGoEngine/bogo-python) — thuật toán Telex rõ ràng.
 - [OpenKey](https://github.com/tuyenvm/OpenKey) — IME full (mac/Windows), đọc để hiểu cả stack.
+- [AOSP LatinIME](https://android.googlesource.com/platform/packages/inputmethods/LatinIME) —
+  `native/jni/src/suggest/policyimpl/typing/scoring_params.cpp` (chi phí lỗi),
+  `InputLogic.revertCommit` (Backspace hoàn tác). Nguồn cho tự sửa gõ nhầm.
+- [FrequencyWords](https://github.com/hermitdave/FrequencyWords) — `vi_50k.txt`
+  (OpenSubtitles, CC-BY-SA-4.0) → `data/vn-syllables.txt`.

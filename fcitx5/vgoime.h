@@ -22,6 +22,10 @@ public:
     vgo::Engine engine;
     std::string shown;          // text đã commit cho từ đang gõ (chế độ surrounding)
     bool usingPreedit = false;  // true nếu ô này phải fallback preedit
+    // Từ vừa chốt là bản tự sửa -> Backspace NGAY sau đó trả lại phím thô
+    // (như LatinIME InputLogic.revertCommit). Phím khác bất kỳ -> hết hiệu lực.
+    bool canRevert = false;
+    std::string revRaw, revShown, revSep;
 };
 
 class VgoEngine : public fcitx::InputMethodEngineV2 {
@@ -38,6 +42,7 @@ private:
     void showPreedit(fcitx::InputContext *ic, VgoState *state);  // fallback
     void finalize(fcitx::InputContext *ic, VgoState *state,
                   uint32_t boundary = 0);                        // chốt từ + dọn
+    bool revertCorrection(fcitx::InputContext *ic, VgoState *state);  // Backspace hoàn tác
 
     fcitx::Instance *instance_;
     fcitx::FactoryFor<VgoState> factory_;

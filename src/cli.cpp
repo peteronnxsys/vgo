@@ -13,6 +13,8 @@ int main(int argc, char** argv) {
     vgo::dictLoadFile("/usr/share/vgo/en-base.txt");
     vgo::vnLoadFile("data/vn-base.txt");
     vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");
+    vgo::vnLexLoadFile("data/vn-syllables.txt");
+    vgo::vnLexLoadFile("/usr/share/vgo/vn-syllables.txt");
     vgo::bigramLoadFile("data/bigram-base.txt");
     vgo::bigramLoadFile("/usr/share/vgo/bigram-base.txt");
     if (argc > 1) {

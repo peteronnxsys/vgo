@@ -43,11 +43,15 @@ public:
 
     // Có thể là một âm tiết tiếng Việt hợp lệ (hoặc tiền tố của một âm tiết)?
     bool plausible() const;
+    // Âm tiết TRỌN hợp lệ (chặt hơn plausible: kiểm cả vần + luật chính tả).
+    bool complete() const;
     // Nút lật 2 chiều (Esc): ép từ đang gõ về thô (Anh) hoặc về tiếng Việt.
     void forceRaw() { forcedRaw_ = true; forcedVN_ = false; }
     void forceVN()  { forcedVN_ = true;  forcedRaw_ = false; }
     // Hiện tại từ đang gõ ra dạng thô (Anh) hay bản tiếng Việt?
     bool isShowingRaw() const;
+    // Đang hiện bản TỰ SỬA gõ nhầm (không phải đúng phím đã gõ)?
+    bool isCorrected() const { return !isShowingRaw() && !plausible() && !correction().empty(); }
 
     // Chuỗi để hiển thị (tầng tích hợp dùng cái này): isShowingRaw ? thô : tiếng Việt.
     std::string display() const;
@@ -65,6 +69,8 @@ private:
 
     void appendLiteral(char c);
     void normalizeTone();
+    std::string correction() const;     // bản sửa 1 lỗi gõ, "" nếu không có / mơ hồ
+    mutable std::string corrRaw_, corrOut_;  // nhớ kết quả correction() theo raw_
 
     bool handleTone(int tone, char typed);
     bool handleRemoveTone(char typed);
@@ -85,6 +91,13 @@ void vnAddWord(const std::string& w);
 void vnLoadFile(const std::string& path);
 bool vnContains(const std::string& w);
 void vnRemoveWord(const std::string& w);         // gỡ (Esc lật sang Anh)
+
+// ---- TỪ ĐIỂN ÂM TIẾT VIỆT có tần suất (cho tự sửa gõ nhầm) ----
+// File: mỗi dòng "âm_tiết số_lần" (UTF-8, thường), vd "không 668048".
+void vnLexAdd(const std::string& syllable, long count);
+void vnLexLoadFile(const std::string& path);
+long vnLexCount(const std::string& syllable);    // 0 = không có
+long vnLexMax();                                 // số lần lớn nhất (chuẩn hoá độ hiếm)
 
 // ---- BIGRAM: từ trước + từ đang gõ -> ép Anh/Việt (thắng 2 danh sách trên; Esc thắng tất) ----
 // File: mỗi dòng "từ_trước phím_thô en|vn", vd "it's been en", "xe bus en".

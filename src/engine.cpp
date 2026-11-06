@@ -6,6 +6,8 @@
 #include <set>
 #include <fstream>
 #include <cctype>
+#include <cstring>
+#include <cmath>
 #include <sstream>
 
 namespace vgo {
@@ -453,6 +455,10 @@ void Engine::backspace() {
 }                                        // "bị"+lỡ'x'="bĩ" -> backspace -> "bị" (không tụt "bi"/"b")
 
 std::string Engine::preedit() const {
+    if (!plausible()) {                  // "nahawns" -> "nhắn" (Esc lật về thô)
+        std::string fix = correction();
+        if (!fix.empty()) return fix;
+    }
     std::string out;
     for (char32_t c : spellFix(buf_, cfg_)) encodeOne(out, c);
     return out;
@@ -488,6 +494,228 @@ bool Engine::plausible() const {
     if (!hasVowel) return isPrefixOfSome(ONSETS, onset);  // mới có phụ âm đầu
     if (!ONSETS.count(onset)) return false;
     return isPrefixOfSome(CODAS, coda);
+}
+
+namespace {
+// Vần (cụm nguyên âm, bỏ thanh; đã tách âm đệm của qu/gi) -> có được theo sau
+// bởi phụ âm cuối không: 'O' = chỉ mở, 'C' = phải có cuối, 'B' = cả hai.
+const std::unordered_map<std::string, char> NUCLEI = {
+    {"a",'B'}, {"ă",'C'}, {"â",'C'}, {"e",'B'}, {"ê",'B'}, {"i",'B'}, {"o",'B'},
+    {"ô",'B'}, {"ơ",'B'}, {"u",'B'}, {"ư",'B'}, {"y",'O'}, {"oo",'C'},
+    {"ai",'O'}, {"ao",'O'}, {"au",'O'}, {"ay",'O'}, {"âu",'O'}, {"ây",'O'},
+    {"eo",'O'}, {"êu",'O'}, {"ia",'O'}, {"iu",'O'}, {"oi",'O'}, {"ôi",'O'},
+    {"ơi",'O'}, {"ui",'O'}, {"ưi",'O'}, {"ưu",'O'}, {"ưa",'O'}, {"ua",'O'},
+    {"uơ",'O'}, {"oa",'B'}, {"oe",'B'}, {"uê",'B'}, {"uy",'B'}, {"oă",'C'},
+    {"uâ",'C'}, {"iê",'C'}, {"yê",'C'}, {"uô",'C'}, {"ươ",'C'},
+    {"oai",'O'}, {"oay",'O'}, {"oeo",'O'}, {"uây",'O'}, {"uôi",'O'}, {"uya",'O'},
+    {"uyu",'O'}, {"ươi",'O'}, {"ươu",'O'}, {"iêu",'O'}, {"yêu",'O'}, {"uyê",'C'},
+};
+} // namespace
+
+// Âm tiết TRỌN hợp lệ (không chỉ là tiền tố): chặt hơn plausible() — kiểm cả vần
+// và vài luật chính tả. Dùng cho ứng viên sửa lỗi gõ.
+bool Engine::complete() const {
+    std::u32string s = spellFix(buf_, cfg_);
+    int n = (int)s.size(), i = 0;
+    std::string onset, coda;
+    std::vector<Decomp> nuc;
+    while (i < n && !isVowelChar(s[i])) { onset += decompose(s[i]).base; ++i; }
+    while (i < n &&  isVowelChar(s[i])) nuc.push_back(decompose(s[i++]));
+    while (i < n && !isVowelChar(s[i])) { coda += decompose(s[i]).base; ++i; }
+    if (i < n || nuc.empty() || !ONSETS.count(onset) || !CODAS.count(coda)) return false;
+    // qu / gi + nguyên âm: u / i thuộc phụ âm đầu
+    if (onset == "q") {
+        if (nuc[0].base != 'u' || nuc[0].mod != M_NONE || nuc.size() < 2) return false;
+        nuc.erase(nuc.begin());
+    } else if (onset == "g" && nuc[0].base == 'i' && nuc.size() >= 2) {
+        nuc.erase(nuc.begin());
+    }
+    std::string key;
+    int tone = T_NONE;
+    for (auto& d : nuc) {
+        encodeOne(key, compose(d.base, d.mod, T_NONE, false));
+        if (d.tone != T_NONE) tone = d.tone;
+    }
+    auto it = NUCLEI.find(key);
+    if (it == NUCLEI.end()) return false;
+    if (coda.empty() ? it->second == 'C' : it->second == 'O') return false;
+    char v0 = nuc[0].base;
+    bool front = (v0 == 'i' || v0 == 'e' || v0 == 'y');
+    if ((onset == "k" || onset == "gh" || onset == "ngh") && !front) return false;
+    if ((onset == "c" || onset == "ng") && front) return false;
+    if (onset == "g" && v0 == 'e') return false;
+    const Decomp& vl = nuc.back();
+    if ((coda == "ch" || coda == "nh") &&
+        !((vl.base == 'a' && vl.mod == M_NONE) || (vl.base == 'e' && vl.mod == M_CIRC) ||
+          vl.base == 'i' || vl.base == 'y'))
+        return false;
+    // vần tắc (c/ch/p/t) chỉ mang sắc / nặng (hoặc chưa gõ thanh)
+    if ((coda == "c" || coda == "ch" || coda == "p" || coda == "t") &&
+        tone != T_NONE && tone != 1 && tone != 5)
+        return false;
+    return true;
+}
+
+namespace {
+// Số cặp liền nhau là phím Telex đúp (aa/ee/oo/dd) — edit tạo thêm cặp mới thì
+// ứng viên là "ghép nhầm": "alafm" đảo 'a','l' -> "laafm" -> "lầm".
+int telexPairs(const std::string& r) {
+    int k = 0;
+    for (size_t i = 0; i + 1 < r.size(); ++i) {
+        char a = (char)std::tolower((unsigned char)r[i]);
+        if (a == (char)std::tolower((unsigned char)r[i+1]) &&
+            (a == 'a' || a == 'e' || a == 'o' || a == 'd'))
+            ++k;
+    }
+    return k;
+}
+// Có nguyên âm a/e/o gõ lặp KHÔNG liền nhau ("asay" -> "ấy", "beepers" -> "bếp"):
+// mũ không liền là tiện ích lúc gõ, làm chỗ dựa cho bản sửa thì quá yếu.
+bool farCircumflex(const std::string& r) {
+    for (size_t j = 2; j < r.size(); ++j) {
+        char c = (char)std::tolower((unsigned char)r[j]);
+        if (c != 'a' && c != 'e' && c != 'o') continue;
+        for (size_t k = 0; k + 1 < j; ++k)
+            if (std::tolower((unsigned char)r[k]) == c) return true;
+    }
+    return false;
+}
+// Hai phím nằm sát nhau trên bàn phím QWERTY (cùng hàng hoặc hàng kề, lệch < 1 phím).
+bool qwertyNear(char a, char b) {
+    static const char* ROWS[3] = { "qwertyuiop", "asdfghjkl", "zxcvbnm" };
+    static const double OFF[3] = { 0, 0.25, 0.75 };
+    a = (char)std::tolower((unsigned char)a);
+    b = (char)std::tolower((unsigned char)b);
+    int ra = -1, rb = -1;
+    double xa = 0, xb = 0;
+    for (int r = 0; r < 3; ++r) {
+        if (const char* p = std::strchr(ROWS[r], a)) { ra = r; xa = OFF[r] + (p - ROWS[r]); }
+        if (const char* p = std::strchr(ROWS[r], b)) { rb = r; xb = OFF[r] + (p - ROWS[r]); }
+    }
+    if (ra < 0 || rb < 0 || a == b) return false;
+    double dx = xa > xb ? xa - xb : xb - xa;
+    return ra == rb ? dx == 1 : (ra - rb == 1 || rb - ra == 1) && dx < 1;
+}
+bool sameKey(char a, char b) {
+    return std::tolower((unsigned char)a) == std::tolower((unsigned char)b);
+}
+
+// Chi phí lỗi lấy từ AOSP LatinIME (native/jni/src/suggest/policyimpl/typing/
+// scoring_params.cpp + typing_weighting.h). Tên LatinIME tính theo TỪ ĐÚNG:
+// "insertion" = gõ thừa 1 phím (ta xoá), "omission" = gõ thiếu (ta chèn).
+constexpr float INSERTION_COST            = 0.7248f;
+constexpr float INSERTION_COST_SAME_CHAR  = 0.5508f;
+constexpr float INSERTION_COST_PROXIMITY_CHAR = 0.674f;
+constexpr float DISTANCE_WEIGHT_LANGUAGE  = 1.1214f;
+constexpr float TYPING_MAX_OUTPUT_SCORE_PER_INPUT = 0.1f;
+constexpr float AUTOCORRECT_THRESHOLD     = 0.185f;   // mức "modest" (config-auto-correction-thresholds.xml)
+// LatinIME chưa làm ("TODO: ... nearly equals ... behave less aggressive"): bản sửa
+// nhì có điểm >= MARGIN * bản nhất -> mơ hồ, không sửa. ("cvuj": vụ 0.25 vs cụ 0.16
+// -> vẫn sửa thành "vụ", vì vụ gặp nhiều hơn cụ ~13 lần.)
+constexpr float AMBIGUITY_MARGIN          = 0.8f;
+} // namespace
+
+// Tự sửa 1 lỗi gõ theo mô hình LatinIME: xoá 1 phím thừa, gõ lại qua Engine, chỉ giữ âm
+// tiết CÓ TRONG từ điển âm tiết; điểm = 1 - (chi phí lỗi + độ hiếm × 1.12) /
+// (1.12 + 0.1 × số phím), × (1 - 1/độ dài) (calcNormalizedScore); nhận bản nhất nếu
+// >= ngưỡng, không sát nút bản nhì, và không có từ Anh nào rẻ bằng.
+// Khác LatinIME vì vgo gõ song ngữ không báo trước, trên bàn phím thật + Telex. Đo
+// trên vn-words.txt cá nhân (lỗi thật) + 74.7k từ /usr/share/dict/words (sửa nhầm):
+//   - CHỈ xoá phím thừa. Thay/chèn phím: từ Anh ngoài từ điển nào cũng cách 1 âm tiết
+//     Việt đúng 1 phím thay (1279/1314 ca sửa nhầm), trên lỗi thật cũng hay đoán sai
+//     ("nhhir" -> "nghỉ", "hheest" -> "chết"). Đảo phím: đưa 'w'/'s' ra sau nguyên âm
+//     thành dấu ("swan" -> "săn"), lỗi thật không cần.
+//   - chỉ xoá TRƯỚC nguyên âm cuối: đuôi từ là chỗ phím thanh + phụ âm cuối, va với
+//     đuôi tiếng Anh ("cods" -> "có", "lass" -> "lá"); không xoá phím vừa gõ.
+//   - chỉ xoá phím đúp (INSERTION_COST_SAME_CHAR) hoặc phím kề (PROXIMITY_CHAR) — phím
+//     đầu từ chạm trượt ("jkhas", "bnos") là lỗi hay gặp nhất nên không phụ phí
+//     INSERTION_COST_FIRST_CHAR như cảm ứng; INSERTION_COST thường chỉ cho nguyên âm
+//     gõ sớm kẹp giữa phụ âm đầu ("nahawns").
+//   - ứng viên tạo thêm cặp Telex đúp (aa/ee/oo/dd) hoặc dựa vào mũ không liền là
+//     ghép nhầm, bỏ.
+std::string Engine::correction() const {
+    if (raw_ == corrRaw_) return corrOut_;
+    corrRaw_ = raw_;
+    corrOut_.clear();
+    const std::string& r = raw_;
+    int n = (int)r.size(), caps = 0;
+    for (char c : r) {
+        if (!std::isalpha((unsigned char)c)) return "";   // có số: gõ cẩn thận, không sửa
+        if (std::isupper((unsigned char)c)) ++caps;
+    }
+    if (n < 2 || caps > 1) return "";                     // isMostlyCaps: không sửa
+
+    struct Cand { float score = -1, cost = 0; std::string out; };
+    std::unordered_map<std::string, Cand> byOut;         // bản hiển thị -> ứng viên điểm cao nhất
+    float bestEnCost = 1e9f, maxDist = DISTANCE_WEIGHT_LANGUAGE +
+                                       n * TYPING_MAX_OUTPUT_SCORE_PER_INPUT;
+    int pairs = telexPairs(r);
+    auto tryRaw = [&](const std::string& cand, float cost) {
+        if (cand.empty() || telexPairs(cand) > pairs || farCircumflex(cand)) return;
+        if (dictContains(cand)) { bestEnCost = std::min(bestEnCost, cost); return; }
+        Engine e(cfg_);
+        for (char c : cand) e.key(c);
+        std::string key, out;                            // key = bản chữ thường để tra
+        for (char32_t c : spellFix(e.buf_, cfg_)) {
+            Decomp d = decompose(c);
+            encodeOne(key, compose(d.base, d.mod, d.tone, false));
+            encodeOne(out, c);
+        }
+        long cnt = vnLexCount(key);
+        if (cnt <= 0) return;
+        float improb = 1.0f - std::log((float)cnt) / std::log((float)vnLexMax());
+        float score = 1.0f - (cost + improb * DISTANCE_WEIGHT_LANGUAGE) / maxDist;
+        score *= 1.0f - 1.0f / (float)cand.size();         // calcNormalizedScore, edit distance 1
+        Cand& b = byOut[out];
+        if (score > b.score) b = {score, cost, out};
+    };
+    // Dạng biến tố của từ Anh ("warns", "sweeps", "liked") -> đang gõ Anh, không sửa
+    std::string lo = r;
+    for (char& c : lo) c = (char)std::tolower((unsigned char)c);
+    for (const char* suf : { "s", "es", "ed", "d", "ing", "er", "ers", "est", "ly" }) {
+        size_t k = std::strlen(suf);
+        if (lo.size() > k + 2 && lo.compare(lo.size() - k, k, suf) == 0 &&
+            dictContains(lo.substr(0, lo.size() - k)))
+            return "";
+    }
+    auto isV = [&](int i) { return isVowelBase((char)std::tolower((unsigned char)r[i])); };
+    int firstVowel = 0, lastVowel = n - 1;
+    while (firstVowel < n && !isV(firstVowel)) ++firstVowel;
+    while (lastVowel >= 0 && !isV(lastVowel)) --lastVowel;
+    for (int i = 0; i < n; ++i) {
+        if (i >= lastVowel) break;
+        // gõ thừa phím i (LatinIME: insertion)
+        bool same = i > 0 && sameKey(r[i-1], r[i]);   // đúp: bỏ phím sau ("Ccofn" -> "Còn")
+        bool near = (i > 0 && qwertyNear(r[i-1], r[i])) || (i + 1 < n && qwertyNear(r[i+1], r[i]));
+        // đúp aa/ee/oo/dd là phím dấu Telex: xoá 1 nửa là đổi dấu, không phải sửa lỗi
+        // ("xuoowsng" -> "xướng" sai; đúng là bỏ 'w' kề 's' -> "xuống")
+        if (same && std::strchr("aeod", std::tolower((unsigned char)r[i]))) same = false;
+        // sau nguyên âm đầu: đúp phím thanh/móc là hoàn tác Telex ("thijj", "hurry"), còn
+        // phím kề thì lẫn với chữ Anh ("hazy" -> "hay") -> chỉ nhận đúp phụ âm thường
+        if (i > firstVowel) {
+            near = false;
+            if (std::strchr("sfrxjzw", std::tolower((unsigned char)r[i]))) same = false;
+        }
+        // nguyên âm gõ sớm 1 nhịp, kẹp giữa phụ âm đầu ("nahawns" -> "nhắn"). Đầu từ thì
+        // không: từ Anh mở đầu bằng nguyên âm quá nhiều ("emoji" -> "mọi", "ether").
+        bool early = i == firstVowel && i > 0 && i + 1 < n && !isV(i + 1);
+        if (!same && !near && !early) continue;
+        float del = same ? INSERTION_COST_SAME_CHAR
+                  : near ? INSERTION_COST_PROXIMITY_CHAR : INSERTION_COST;
+        tryRaw(r.substr(0, i) + r.substr(i + 1), del);
+    }
+    Cand best, second;
+    for (auto& kv : byOut) {
+        if (kv.second.score > best.score) { second = best; best = kv.second; }
+        else if (kv.second.score > second.score) second = kv.second;
+    }
+    if (best.score < AUTOCORRECT_THRESHOLD) return "";
+    if (second.score >= AMBIGUITY_MARGIN * best.score) return "";
+    // Song ngữ (LatinIME không có): có từ Anh cách ĐÚNG 1 lỗi với chi phí không đắt hơn
+    // -> có thể đang gõ Anh, không sửa ("rroof": "roof" vs "rồ").
+    if (bestEnCost <= best.cost) return "";
+    corrOut_ = best.out;
+    return corrOut_;
 }
 
 // ================= Từ điển tiếng Anh =================
@@ -551,6 +779,36 @@ bool vnContains(const std::string& w) {
     return vnSet().count(lower(w)) > 0;
 }
 void vnRemoveWord(const std::string& w) { vnSet().erase(lower(w)); }
+
+namespace {
+std::unordered_map<std::string, long>& lexMap() {   // âm tiết Việt -> số lần
+    static std::unordered_map<std::string, long> m;
+    return m;
+}
+long& lexMaxRef() { static long mx = 1; return mx; }
+} // namespace
+long vnLexMax() { return lexMaxRef(); }
+void vnLexAdd(const std::string& syllable, long count) {
+    if (syllable.empty() || count <= 0) return;
+    long& c = lexMap()[syllable];
+    c = std::max(c, count);
+    lexMaxRef() = std::max(lexMaxRef(), count);
+}
+void vnLexLoadFile(const std::string& path) {
+    std::ifstream f(path);
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream in(line);
+        std::string w;
+        long n;
+        if (in >> w >> n) vnLexAdd(w, n);
+    }
+}
+long vnLexCount(const std::string& syllable) {
+    auto it = lexMap().find(syllable);
+    return it == lexMap().end() ? 0 : it->second;
+}
 
 void bigramAdd(const std::string& prev, const std::string& raw, bool english) {
     if (!prev.empty() && !raw.empty()) bigramMap()[lower(prev) + "\t" + lower(raw)] = english;
@@ -620,7 +878,8 @@ bool Engine::isShowingRaw() const {
     // Viết tắt IN HOA giữa câu thường ("mua NAS") -> thô. Câu IN HOA toàn bộ
     // ("VIỆT NAM VÀ") / đầu dòng thì vẫn Việt: không có từ trước chữ thường.
     if (isShortAllCaps(raw_) && hasLower(prev_)) return true;
-    return !plausible();                                 // còn lại: theo cấu trúc
+    if (plausible()) return false;                       // còn lại: theo cấu trúc
+    return correction().empty();                         // sửa được 1 lỗi gõ -> Việt
 }
 
 std::string Engine::display() const {
