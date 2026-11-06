@@ -33,7 +33,7 @@ static const std::vector<Case> CASES = {
     {"hoaf", "hòa"}, {"khoer", "khỏe"}, {"thuys", "thúy"}, {"thuyr", "thủy"},
     // --- dời dấu khi thêm phụ âm cuối ---
     {"toansr", "toản"},  // t,o,a,n,s,r ? kiểm chuỗi dài
-    {"loanx", "loãn"}, {"toans", "toán"}, {"uons", "uón"},
+    {"loanx", "loãn"}, {"toans", "toán"}, {"uons", "uốn"},
     {"toasn", "toán"},  // gõ dấu trước phụ âm cuối -> phải dời
     // --- 'w' gõ sau (sau nguyên âm sau / phụ âm cuối): áp lên cả cụm nguyên âm ---
     {"cuarw", "cửa"}, {"cuawr", "cửa"}, {"muaw", "mưa"}, {"giuawx", "giữa"},
@@ -52,6 +52,15 @@ static const std::vector<Case> CASES = {
     {"didd", "đi"}, {"Didd", "Đi"}, {"dduongwf", "đường"}, {"duongwfdd", "đường"},
     {"did", "did"},     // 1 chữ d sau nguyên âm: giữ thô (tiếng Anh)
     {"Cuarw", "Cửa"}, {"CUARW", "CỬA"},
+    // --- ép nguyên âm đôi theo chính tả (quên mũ/móc vẫn ra đúng) ---
+    {"tiengs", "tiếng"}, {"vietj", "việt"}, {"yeu", "yêu"}, {"hieur", "hiểu"},
+    {"giengs", "giếng"}, {"khuyen", "khuyên"}, {"tuyetj", "tuyệt"},
+    {"huwongs", "hướng"}, {"truwongf", "trường"}, {"ruwouj", "rượu"}, {"nuwowcs", "nước"},
+    {"muons", "muốn"}, {"cuocj", "cuộc"}, {"buon", "buôn"}, {"quocs", "quốc"},
+    {"tie", "tie"}, {"huwo", "hưo"}, {"thuo", "thuo"},   // âm tiết còn mở: để yên
+    {"tuoir", "tuỏi"},  // "uoi" mơ hồ (tuổi/người): không đoán
+    {"dyeing", "dyeing"}, {"yea", "yea"},                // không phải vần iê/yê: để yên
+    {"tieng", "tiêng"}, {"thuongwr", "thưởng"},          // 'w' gõ sau vẫn thắng uô
     // --- gõ đúp phím điều khiển ---
     {"aaa", "aa"},      // mũ (aa->â) gõ lần 3: revert -> "aa"
     {"thijj", "thijj"}, // B (chuẩn Telex): double dấu = bỏ dấu + chữ thật -> "thij" thô; Backspace cứu

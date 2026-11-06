@@ -161,6 +161,60 @@ int findToneTarget(const std::u32string& s, const Config& cfg) {
     return pen;
 }
 
+// Dời dấu thanh (nếu có) về đúng nguyên âm theo findToneTarget.
+void retone(std::u32string& s, const Config& cfg) {
+    int tone = T_NONE, pos = -1;
+    for (int i = 0; i < (int)s.size(); ++i) {
+        Decomp d = decompose(s[i]);
+        if (isVowelBase(d.base) && d.tone != T_NONE) { tone = d.tone; pos = i; break; }
+    }
+    if (tone == T_NONE) return;
+    for (int i = 0; i < (int)s.size(); ++i) {
+        Decomp d = decompose(s[i]);
+        if (isVowelBase(d.base) && d.tone != T_NONE)
+            s[i] = compose(d.base, d.mod, T_NONE, d.upper);
+    }
+    int tgt = findToneTarget(s, cfg);
+    if (tgt < 0) tgt = pos;
+    Decomp d = decompose(s[tgt]);
+    s[tgt] = compose(d.base, d.mod, tone, d.upper);
+}
+
+// Ép nguyên âm đôi theo chính tả (chỉ lúc hiển thị, buf_ giữ nguyên để 'w'/'e'
+// gõ sau vẫn áp được). Tiếng Việt không có các vần trần này khi có chữ theo sau:
+//   ie/ye + phụ âm/u -> iê/yê   ("tiengs"->"tiếng", "yeu"->"yêu", "gieng"->"giêng")
+//   ưo + chữ         -> ươ      ("huwongs"->"hướng", "ruwou"->"rượu")
+//   uo + phụ âm cuối -> uô      ("muons"->"muốn"); "uoi" mơ hồ (tuổi/người) -> để yên
+std::u32string spellFix(std::u32string s, const Config& cfg) {
+    int n = (int)s.size();
+    int a = 0;
+    while (a < n && !isVowelChar(s[a])) ++a;
+    bool changed = false;
+    // i+2 < n: cặp phải có chữ theo sau (cặp ở cuối = âm tiết còn mở, để yên)
+    for (int i = a; i + 2 < n && isVowelChar(s[i+1]); ++i) {
+        Decomp d0 = decompose(s[i]), d1 = decompose(s[i+1]);
+        bool nextCons = !isVowelChar(s[i+2]);
+        bool nextU = decompose(s[i+2]).base == 'u';
+        // "ye" chỉ đứng đầu vần (yên) hoặc sau u (uyên); "dyeing" thì không
+        bool yeOk = d0.base=='i' || i == a || decompose(s[i-1]).base == 'u';
+        int want = M_NONE;
+        if ((d0.base=='i' || d0.base=='y') && yeOk && d0.mod==M_NONE &&
+            d1.base=='e' && d1.mod==M_NONE && (nextCons || nextU))
+            want = M_CIRC;
+        else if (d0.base=='u' && d0.mod==M_HORN && d1.base=='o' && d1.mod==M_NONE)
+            want = M_HORN;
+        else if (d0.base=='u' && d0.mod==M_NONE && d1.base=='o' && d1.mod==M_NONE && nextCons)
+            want = M_CIRC;
+        if (want != M_NONE) {
+            s[i+1] = compose(d1.base, want, d1.tone, d1.upper);
+            changed = true;
+            break;
+        }
+    }
+    if (changed) retone(s, cfg);
+    return s;
+}
+
 int toneOf(char lc) {
     switch (lc) { case 's':return 1; case 'f':return 2; case 'r':return 3;
                   case 'x':return 4; case 'j':return 5; default:return 0; }
@@ -175,23 +229,7 @@ void Engine::appendLiteral(char c) {
                     std::isupper((unsigned char)c));
 }
 
-void Engine::normalizeTone() {
-    int tone = T_NONE, pos = -1;
-    for (int i = 0; i < (int)buf_.size(); ++i) {
-        Decomp d = decompose(buf_[i]);
-        if (isVowelBase(d.base) && d.tone != T_NONE) { tone = d.tone; pos = i; break; }
-    }
-    if (tone == T_NONE) return;
-    for (int i = 0; i < (int)buf_.size(); ++i) {
-        Decomp d = decompose(buf_[i]);
-        if (isVowelBase(d.base) && d.tone != T_NONE)
-            buf_[i] = compose(d.base, d.mod, T_NONE, d.upper);
-    }
-    int tgt = findToneTarget(buf_, cfg_);
-    if (tgt < 0) tgt = pos;
-    Decomp d = decompose(buf_[tgt]);
-    buf_[tgt] = compose(d.base, d.mod, tone, d.upper);
-}
+void Engine::normalizeTone() { retone(buf_, cfg_); }
 
 bool Engine::handleTone(int tone, char typed) {
     int tgt = findToneTarget(buf_, cfg_);
@@ -416,7 +454,7 @@ void Engine::backspace() {
 
 std::string Engine::preedit() const {
     std::string out;
-    for (char32_t c : buf_) encodeOne(out, c);
+    for (char32_t c : spellFix(buf_, cfg_)) encodeOne(out, c);
     return out;
 }
 
