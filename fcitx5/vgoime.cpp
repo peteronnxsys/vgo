@@ -70,7 +70,7 @@ bool g_dictLoaded = false;
 void loadDictOnce() {
     if (g_dictLoaded) return;
     g_dictLoaded = true;
-    vgo::dictLoadFile("/usr/share/vgo/en-base.txt");  // base Anh chuẩn (ship sẵn)
+    vgo::dictLoadFile("/usr/share/vgo/en-base.txt", true);  // base Anh chuẩn (ship sẵn)
     vgo::dictLoadFile(userDictPath());                // Anh: lớp cá nhân (tự học)
     vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");    // ép-Việt: base (ship sẵn)
     vgo::vnLoadFile(userVNDictPath());                // ép-Việt: lớp cá nhân (tự học)
@@ -115,8 +115,9 @@ void learnEnglish(std::string w) {
 void learnVN(std::string w) {
     for (char &c : w) c = (char)std::tolower((unsigned char)c);
     if (w.size() < 2) return;
-    // Từ điển Anh trong bộ nhớ giữ nguyên (ép-Việt đã thắng nó; luật "từ trước
-    // ra Anh" vẫn cần biết "is" là từ Anh) — chỉ dọn file cá nhân.
+    // Gỡ khỏi lớp Anh cá nhân (bộ nhớ + file) ngay, không đợi restart. Base giữ
+    // nguyên: luật "từ trước ra Anh" vẫn cần biết "is" là từ Anh.
+    vgo::dictRemoveWord(w);
     removeLine(userDictPath(), w);
     if (vgo::vnContains(w)) return;
     vgo::vnAddWord(w);

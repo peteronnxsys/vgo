@@ -81,9 +81,12 @@ private:
 
 // ---- Từ điển tiếng Anh (chia sẻ toàn tiến trình; nạp 1 lần) ----
 // Khi chuỗi phím thô khớp một từ trong từ điển -> coi là tiếng Anh, nhả thô.
-void dictAddWord(const std::string& w);          // thêm 1 từ (lowercase hoá)
-void dictLoadFile(const std::string& path);      // nạp file, mỗi dòng 1 từ; thiếu file thì bỏ qua
-bool dictContains(const std::string& w);         // tra (lowercase)
+// base = en-base ship sẵn (tin được); còn lại = lớp cá nhân tự học qua Esc.
+void dictAddWord(const std::string& w, bool base = false);  // thêm 1 từ (lowercase hoá)
+void dictLoadFile(const std::string& path, bool base = false);  // mỗi dòng 1 từ; thiếu file thì bỏ qua
+bool dictContains(const std::string& w);         // tra (lowercase), cả base lẫn cá nhân
+bool dictBaseContains(const std::string& w);     // chỉ base
+void dictRemoveWord(const std::string& w);       // gỡ từ cá nhân (base giữ nguyên)
 
 // ---- Danh sách ÉP TIẾNG VIỆT (ưu tiên hơn từ điển Anh) ----
 // Từ Việt có mặt chữ trùng một từ Anh (vd "been"->bên) -> ép biến đổi Việt.

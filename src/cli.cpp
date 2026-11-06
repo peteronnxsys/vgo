@@ -9,8 +9,8 @@
 int main(int argc, char** argv) {
     vgo::Config cfg;
     // nạp từ điển nếu có (chạy từ repo: data/*.txt; hoặc bản đã cài)
-    vgo::dictLoadFile("data/en-base.txt");
-    vgo::dictLoadFile("/usr/share/vgo/en-base.txt");
+    vgo::dictLoadFile("data/en-base.txt", true);
+    vgo::dictLoadFile("/usr/share/vgo/en-base.txt", true);
     vgo::vnLoadFile("data/vn-base.txt");
     vgo::vnLoadFile("/usr/share/vgo/vn-base.txt");
     vgo::vnLexLoadFile("data/vn-syllables.txt");

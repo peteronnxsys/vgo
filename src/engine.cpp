@@ -720,6 +720,10 @@ std::string Engine::correction() const {
 
 // ================= Từ điển tiếng Anh =================
 namespace {
+std::unordered_set<std::string>& dictBaseSet() {   // chỉ en-base (ship sẵn)
+    static std::unordered_set<std::string> s;
+    return s;
+}
 std::unordered_set<std::string>& dictSet() {
     static std::unordered_set<std::string> s;
     return s;
@@ -742,10 +746,12 @@ std::string lower(const std::string& s) {
 }
 } // namespace
 
-void dictAddWord(const std::string& w) {
-    if (!w.empty()) dictSet().insert(lower(w));
+void dictAddWord(const std::string& w, bool base) {
+    if (w.empty()) return;
+    dictSet().insert(lower(w));
+    if (base) dictBaseSet().insert(lower(w));
 }
-void dictLoadFile(const std::string& path) {
+void dictLoadFile(const std::string& path, bool base) {
     std::ifstream f(path);
     std::string line;
     while (std::getline(f, line)) {
@@ -754,11 +760,17 @@ void dictLoadFile(const std::string& path) {
         size_t i = 0;
         while (i < line.size() && (line[i]==' ' || line[i]=='\t')) ++i;
         if (i) line = line.substr(i);
-        if (!line.empty() && line[0] != '#') dictAddWord(line);
+        if (!line.empty() && line[0] != '#') dictAddWord(line, base);
     }
 }
 bool dictContains(const std::string& w) {
     return dictSet().count(lower(w)) > 0;
+}
+bool dictBaseContains(const std::string& w) {
+    return dictBaseSet().count(lower(w)) > 0;
+}
+void dictRemoveWord(const std::string& w) {
+    if (!dictBaseContains(w)) dictSet().erase(lower(w));
 }
 void vnAddWord(const std::string& w) {
     if (!w.empty()) vnSet().insert(lower(w));
@@ -869,10 +881,11 @@ bool Engine::isShowingRaw() const {
     if (!b && prevRaw_ != prev_) b = bigramLookup(prevRaw_, low);  // "has" đã hiện "há"
     if (b) return b > 0;
     if (VN_PRIORITY.count(low)) return false;
-    // Từ trước ra Anh + từ này có trong từ điển Anh -> theo Anh, thắng ép-Việt:
+    // Từ trước ra Anh + từ này có trong từ điển Anh BASE -> theo Anh, thắng ép-Việt:
     // "is" một mình -> í, nhưng "this is"/"for us" -> Anh. (Không làm chiều ngược:
-    // câu Việt hay chen từ Anh — "cần test", "có confirm".)
-    if (prevEn_ && dictContains(low)) return true;
+    // câu Việt hay chen từ Anh — "cần test", "có confirm".) Chỉ base: lớp tự học có
+    // lẫn Esc nhầm — "thif" từng kẹt cả 2 file -> "unit test thì" ra "thif".
+    if (prevEn_ && dictBaseContains(low)) return true;
     if (vnContains(low)) return false;                   // ép Việt
     if (dictContains(low)) return true;                  // từ điển Anh
     // Viết tắt IN HOA giữa câu thường ("mua NAS") -> thô. Câu IN HOA toàn bộ

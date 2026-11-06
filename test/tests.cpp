@@ -135,8 +135,9 @@ int main() {
         {"mua DDAAUF", "mua ĐẦU"},     // >4 chữ: không áp luật
     };
     // --- từ trước ra Anh -> từ mơ hồ (có trong cả ép-Việt lẫn từ điển Anh) theo Anh ---
-    dictAddWord("is"); vnAddWord("is");
-    dictAddWord("us"); vnAddWord("us");
+    dictAddWord("is", true); vnAddWord("is");   // base Anh + ép-Việt
+    dictAddWord("us", true); vnAddWord("us");
+    dictAddWord("thif"); vnAddWord("thif");     // Anh CÁ NHÂN (Esc nhầm) + ép-Việt
     const std::vector<Case> MCASES = {
         {"is", "í"}, {"us", "ú"},           // một mình: ép-Việt
         {"xin is", "xin í"},               // sau từ Việt: vẫn Việt
@@ -146,6 +147,7 @@ int main() {
         {"xin is, us", "xin í, ú"},
         {"this cos", "this có"},           // VN_PRIORITY vẫn thắng
         {"this tooi", "this tôi"},         // không có trong từ điển Anh: không ép
+        {"test thif", "test thì"},         // Anh cá nhân không đủ: luật chỉ theo base
     };
     for (auto& c : MCASES) {
         std::string got = typeString(c.keys, cfg);
