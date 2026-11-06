@@ -34,7 +34,8 @@ public:
     // endWord = chốt từ đang gõ trước ranh giới `boundary` (0 = không có) rồi reset().
     // "it's been": tới lúc gõ "been" thì prev() == "it's".
     void endWord(char32_t boundary);
-    void clearContext() { tok_.clear(); tokRaw_.clear(); prev_.clear(); prevRaw_.clear(); }
+    void clearContext() { tok_.clear(); tokRaw_.clear(); prev_.clear(); prevRaw_.clear();
+                          tokEn_ = prevEn_ = false; }
     const std::string& prev() const { return prev_; }
     bool empty() const { return buf_.empty(); }
     std::string preedit() const;        // chuỗi đã biến đổi tiếng Việt (UTF-8)
@@ -60,6 +61,7 @@ private:
     std::string tok_;          // token hiện tại (phần đã chốt, chưa gặp khoảng trắng)
     std::string prev_;         // token trước (đã gặp khoảng trắng)
     std::string tokRaw_, prevRaw_;  // như trên nhưng là phím thô ("has" dù đã hiện "há")
+    bool tokEn_ = false, prevEn_ = false;  // chữ cuối của token đã ra tiếng Anh (thô)?
 
     void appendLiteral(char c);
     void normalizeTone();
@@ -82,6 +84,7 @@ bool dictContains(const std::string& w);         // tra (lowercase)
 void vnAddWord(const std::string& w);
 void vnLoadFile(const std::string& path);
 bool vnContains(const std::string& w);
+void vnRemoveWord(const std::string& w);         // gỡ (Esc lật sang Anh)
 
 // ---- BIGRAM: từ trước + từ đang gõ -> ép Anh/Việt (thắng 2 danh sách trên; Esc thắng tất) ----
 // File: mỗi dòng "từ_trước phím_thô en|vn", vd "it's been en", "xe bus en".

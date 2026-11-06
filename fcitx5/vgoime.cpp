@@ -84,16 +84,39 @@ void appendLine(const std::string &path, const std::string &w) {
     std::ofstream f(path, std::ios::app);
     if (f) f << w << "\n";
 }
-// Esc "dạy" từ: thêm vào danh sách tương ứng + ghi file cá nhân (nếu chưa có).
+// Xoá mọi dòng đúng bằng w khỏi file cá nhân.
+void removeLine(const std::string &path, const std::string &w) {
+    std::ifstream in(path);
+    if (!in) return;
+    std::string out, line;
+    bool found = false;
+    while (std::getline(in, line)) {
+        if (line == w) { found = true; continue; }
+        out += line + "\n";
+    }
+    in.close();
+    if (!found) return;
+    std::ofstream f(path, std::ios::trunc);
+    if (f) f << out;
+}
+// Esc "dạy" từ: thêm vào danh sách tương ứng + ghi file cá nhân (nếu chưa có),
+// và GỠ khỏi danh sách bên kia — lần lật gần nhất thắng (trước đây từ kẹt ở cả 2
+// file thì ép-Việt luôn thắng, lật về Anh không bao giờ ăn: "this is" -> "thí í").
 void learnEnglish(std::string w) {
     for (char &c : w) c = (char)std::tolower((unsigned char)c);
-    if (w.size() < 2 || vgo::dictContains(w)) return;
+    if (w.size() < 2) return;
+    if (vgo::vnContains(w)) { vgo::vnRemoveWord(w); removeLine(userVNDictPath(), w); }
+    if (vgo::dictContains(w)) return;
     vgo::dictAddWord(w);
     appendLine(userDictPath(), w);
 }
 void learnVN(std::string w) {
     for (char &c : w) c = (char)std::tolower((unsigned char)c);
-    if (w.size() < 2 || vgo::vnContains(w)) return;
+    if (w.size() < 2) return;
+    // Từ điển Anh trong bộ nhớ giữ nguyên (ép-Việt đã thắng nó; luật "từ trước
+    // ra Anh" vẫn cần biết "is" là từ Anh) — chỉ dọn file cá nhân.
+    removeLine(userDictPath(), w);
+    if (vgo::vnContains(w)) return;
     vgo::vnAddWord(w);
     appendLine(userVNDictPath(), w);
 }

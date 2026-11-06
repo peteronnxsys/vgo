@@ -532,7 +532,6 @@ void dictLoadFile(const std::string& path) {
 bool dictContains(const std::string& w) {
     return dictSet().count(lower(w)) > 0;
 }
-
 void vnAddWord(const std::string& w) {
     if (!w.empty()) vnSet().insert(lower(w));
 }
@@ -551,6 +550,7 @@ void vnLoadFile(const std::string& path) {
 bool vnContains(const std::string& w) {
     return vnSet().count(lower(w)) > 0;
 }
+void vnRemoveWord(const std::string& w) { vnSet().erase(lower(w)); }
 
 void bigramAdd(const std::string& prev, const std::string& raw, bool english) {
     if (!prev.empty() && !raw.empty()) bigramMap()[lower(prev) + "\t" + lower(raw)] = english;
@@ -587,13 +587,15 @@ bool hasLower(const std::string& s) {
 } // namespace
 
 void Engine::endWord(char32_t boundary) {
+    if (!raw_.empty()) tokEn_ = isShowingRaw();
     tok_ += display();
     tokRaw_ += raw_;
     reset();
     if (boundary == ' ' || boundary == '\t' || boundary == '\n' || boundary == 0) {
-        if (!tok_.empty()) { prev_ = tok_; prevRaw_ = tokRaw_; }
+        if (!tok_.empty()) { prev_ = tok_; prevRaw_ = tokRaw_; prevEn_ = tokEn_; }
         tok_.clear();
         tokRaw_.clear();
+        tokEn_ = false;
     } else {
         encodeOne(tok_, boundary);
         encodeOne(tokRaw_, boundary);
@@ -608,7 +610,12 @@ bool Engine::isShowingRaw() const {
     int b = bigramLookup(prev_, low);                    // ngữ cảnh: "xe bus", "it's been"
     if (!b && prevRaw_ != prev_) b = bigramLookup(prevRaw_, low);  // "has" đã hiện "há"
     if (b) return b > 0;
-    if (VN_PRIORITY.count(low) || vnContains(low)) return false;  // ép Việt
+    if (VN_PRIORITY.count(low)) return false;
+    // Từ trước ra Anh + từ này có trong từ điển Anh -> theo Anh, thắng ép-Việt:
+    // "is" một mình -> í, nhưng "this is"/"for us" -> Anh. (Không làm chiều ngược:
+    // câu Việt hay chen từ Anh — "cần test", "có confirm".)
+    if (prevEn_ && dictContains(low)) return true;
+    if (vnContains(low)) return false;                   // ép Việt
     if (dictContains(low)) return true;                  // từ điển Anh
     // Viết tắt IN HOA giữa câu thường ("mua NAS") -> thô. Câu IN HOA toàn bộ
     // ("VIỆT NAM VÀ") / đầu dòng thì vẫn Việt: không có từ trước chữ thường.

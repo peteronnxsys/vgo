@@ -134,6 +134,25 @@ int main() {
         {"mua COS",   "mua CÓ"},       // VN_PRIORITY thắng luật IN HOA
         {"mua DDAAUF", "mua ĐẦU"},     // >4 chữ: không áp luật
     };
+    // --- từ trước ra Anh -> từ mơ hồ (có trong cả ép-Việt lẫn từ điển Anh) theo Anh ---
+    dictAddWord("is"); vnAddWord("is");
+    dictAddWord("us"); vnAddWord("us");
+    const std::vector<Case> MCASES = {
+        {"is", "í"}, {"us", "ú"},           // một mình: ép-Việt
+        {"xin is", "xin í"},               // sau từ Việt: vẫn Việt
+        {"this is", "this is"},            // sau từ Anh: Anh
+        {"for us", "for us"},
+        {"this is, us", "this is, us"},    // dấu câu không cắt mạch: "is," ra Anh -> "us" Anh
+        {"xin is, us", "xin í, ú"},
+        {"this cos", "this có"},           // VN_PRIORITY vẫn thắng
+        {"this tooi", "this tôi"},         // không có trong từ điển Anh: không ép
+    };
+    for (auto& c : MCASES) {
+        std::string got = typeString(c.keys, cfg);
+        if (got == c.want) ++pass;
+        else { ++fail; std::printf("FAIL(prevEn) %-14s -> got [%s]  want [%s]\n",
+                                   c.keys, got.c_str(), c.want); }
+    }
     for (auto& c : XCASES) {
         std::string got = typeString(c.keys, cfg);
         if (got == c.want) ++pass;
