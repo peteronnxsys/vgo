@@ -2,16 +2,21 @@
 
 Bộ gõ tiếng Việt cho Linux/fcitx5, viết từ đầu. Tách 2 lớp:
 
-- **Engine** (`src/engine.{hpp,cpp}`) — lõi thuần C++, không phụ thuộc OS. Nhận
+- **Lõi chữ Việt** (`src/viet.{hpp,cpp}`) — bảng dấu, đặt thanh, kiểm âm tiết; dùng
+  chung cho Telex và VNI.
+- **Engine Telex** (`src/engine.{hpp,cpp}`) — thuần C++, không phụ thuộc OS. Nhận
   chuỗi phím Telex → nhả Unicode có dấu (NFC). Test standalone được.
 - **Addon fcitx5** (Phase 2) — bọc engine, móc vào input của hệ điều hành.
 
 ## Build & test
 
 ```sh
-make test     # build + chạy unit test (chỉ cần g++, không cần gì thêm)
+make test     # build + chạy mọi bộ test đang có (chỉ cần g++): Telex unit + vikey + VNI
+make test-telex   # chỉ unit test Telex
 make          # build cả vgo-cli
 make test-vikey   # test cấp câu qua vgo-cli (có nạp data/*.txt): test/vikey-cases.txt
+make test-vni     # VNI: test/vni-cases.txt qua vgo-vni-cli
+make share        # 2 gói chia sẻ (source + bản build sẵn): dist/share/vgo-*.tar.gz, vgo-vni-*.tar.gz
 ./vgo-cli "Tooi yeeu tieengs Vieejt"   # -> Tôi yêu tiếng Việt
 echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 ```
@@ -22,11 +27,12 @@ echo "chaof banj" | ./vgo-cli          # đọc stdin từng dòng
 |-------|----------|-----------|
 | 1 | Engine Telex + unit test + CLI | ✅ xong |
 | 2 | Addon fcitx5 in-process, KHÔNG preedit (Chromium/Electron: preedit) | ✅ xong, đang dùng cạnh Lotus |
-| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong (141/141 test) |
-| — | Gõ tắt, VNI, Vietnamese auto-correct | ❌ ngoài scope |
+| 3 | Auto Anh-Việt: kiểm âm tiết + từ điển Anh + danh sách ép-Việt + Esc lật 2 chiều (tự học) | ✅ xong |
+| — | VNI: module riêng `vgo-vni` (`src/vni.*`, `fcitx5/vniime.*`), không từ điển / tự học | ✅ engine + gói cài; chưa gõ thử trên fcitx5 thật |
+| — | Gõ tắt | ❌ ngoài scope |
 
 **Nguyên tắc:** đơn giản nhất có thể, chỉ phục vụ một người, **không đụng Lotus**
-(file riêng `libvgo.so` + `vgo.conf`; gỡ = xoá 3 file). Tối ưu remote: in-process,
+(file riêng `libvgo.so` + `vgo.conf` + `/usr/share/vgo/`). Tối ưu remote: in-process,
 không server phụ, ghi-đè theo diff (chỉ phần đuôi đổi), không cửa sổ gợi ý.
 
 ### Auto Anh-Việt (Phase 3)

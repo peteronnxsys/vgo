@@ -1,0 +1,35 @@
+# Ca test VNI (vgo-vni). Định dạng: ID|phím VNI|kỳ vọng. Chạy: make test-vni
+# Thêm ca mới: chép 1 dòng, đổi ID + phím + kết quả mong muốn, rồi chạy lại.
+# Phần lớn kỳ vọng đối chiếu với UniKey (đo bằng engine thật, 2026-11-11).
+# A — dấu cơ bản: 1 sắc 2 huyền 3 hỏi 4 ngã 5 nặng, 6 mũ, 7 móc, 8 trăng, 9 đ, 0 xoá thanh
+A1|a1 a2 a3 a5|á à ả ạ
+A2|a6 e6 o6 o7 u7 a8 d9 D9|â ê ô ơ ư ă đ Đ
+A3|tie6ng1 Vie65t|tiếng Việt
+A4|nguo7i2 d9a6u2 d9i|người đầu đi
+A5|Xin cha2o, mi2nh te6n la2 Nam.|Xin chào, mình tên là Nam.
+A6|Ba5n co1 kho3e kho6ng?|Bạn có khỏe không?
+A7|D9A6Y NGUYE6N4 Tru7o7ng2|ĐÂY NGUYỄN Trường
+# B — dấu gõ ở đâu trong từ cũng được
+B1|tieng16 tie61ng tie1ng6|tiếng tiếng tiếng
+B2|viet65 viet56|việt việt
+B3|di9 yeu1|đi yếu
+# C — hoàn tác: gõ lại cùng số ra số thật; 0 xoá thanh
+C1|a11 a66 o77 d99|a1 a6 o7 d9
+C2|a10 vie65t0|a viêt
+# D — ươ / uơ / qu / gi
+D1|uo7 huo7 thuo73|uơ huơ thuở
+D2|huong7 thuong7 muo7i2 ru7o7u5|hương thương mười rượu
+D3|qua1 quye6n1 gi2 gia2 gie6t1|quá quyến gì già giết
+D4|hoa2 khoe3 thuy3 hoa8c5|hòa khỏe thủy hoặc
+# E — số thật / mã kỹ thuật: KHÔNG thành dấu
+E1|2026 100 1.5 12:30 11/11/2026|2026 100 1.5 12:30 11/11/2026
+E2|h264 mp3 win10 covid19 iphone15|h264 mp3 win10 covid19 iphone15
+E3|user1 test1 room2 html5 ipv6 x86|user1 test1 room2 html5 ipv6 x86
+E4|4g 5g 3d 2fa km2 ver1.2|4g 5g 3d 2fa km2 ver1.2
+E5|a4 A4 F1 MP3|a4 A4 F1 MP3
+# F — tiếng Anh không có số -> giữ nguyên
+F1|test been file browser cos nos w|test been file browser cos nos w
+# G — sai chính tả -> trả phím thô (vần tắc c/ch/p/t chỉ mang sắc / nặng)
+G1|cat2 ma3t|cat2 ma3t
+# H — mơ hồ thật (bộ gõ nào cũng ra tiếng Việt; muốn thô thì bấm Esc)
+H1|ban2 hi2 la1 a5|bàn hì lá ạ

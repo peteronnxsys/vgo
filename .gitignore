@@ -1,7 +1,9 @@
 # build artifacts
 build/
+dist/
 vgo-test
 vgo-cli
+vgo-vni-cli
 mklex
 *.o
 *.so
